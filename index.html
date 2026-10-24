@@ -92,6 +92,17 @@
   .pill { display: inline-block; margin-top: 8px; font-size: .75rem; font-weight: 900; padding: 3px 9px; border-radius: 999px; background: var(--goldBg); color: var(--gold); }
   code.uid { display: block; padding: 10px 12px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--line); font-size: .88rem; overflow-wrap: anywhere; user-select: all; }
   ol.steps { padding-left: 20px; margin: 10px 0 0; } ol.steps li { margin: 6px 0; }
+  .rep { margin: 8px 0 12px; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); font-size: .9rem; display: grid; gap: 4px; }
+  .rep b.big { font-size: 1.05rem; }
+  .rep .ok { color: var(--ok); font-weight: 800; } .rep .warn { color: var(--gold); font-weight: 800; } .rep .err { color: var(--bad); font-weight: 800; }
+  .rep details { margin-top: 4px; } .rep summary { cursor: pointer; font-weight: 800; color: var(--acc); }
+  .rep ul { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; font-weight: 700; margin: 6px 0; }
+  .opt input { width: auto; margin-top: 3px; }
+  .seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .seg2 button { border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; padding: 10px; font: inherit; font-weight: 800; cursor: pointer; }
+  .seg2 button.on { border-color: var(--acc); color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); }
+  textarea.big { min-height: 160px; font-size: .86rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--acc); animation: sp .8s linear infinite; margin: 40px auto; }
   @keyframes sp { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.5s; } }
@@ -165,10 +176,15 @@
       <ul class="ulist" id="uList"></ul>
     </section>
 
+    <section id="tPacks" class="hidden">
+      <div class="sec-title"><h2>📦 Kelime paketleri</h2><button type="button" class="btn small" id="packNew">＋ Yeni paket</button></div>
+      <p class="muted" style="margin:-4px 2px 12px;font-size:.9rem">Premium paketlerin kelimelerini yalnızca premium, admin ve editör hesaplar alabilir. Ücretsiz paketleri herkes alır.</p>
+      <ul class="ulist" id="packList"></ul>
+    </section>
+
     <section id="tMore" class="hidden">
       <div class="sec-title"><h2>🧩 Yakında</h2></div>
-      <div class="card soon"><div class="ico">📦</div><div><b>Kelime paketleri</b><p>Hazır listeler (A1, YDS, Alışveriş…) oluştur, ücretsiz ya da premium olarak yayınla. Kullanıcılar tek dokunuşla ekler.</p><span class="pill">Sıradaki adım</span></div></div>
-      <div class="card soon"><div class="ico">🎛️</div><div><b>Özellik anahtarları</b><p>Her özelliği “Herkese açık / Premium / Kapalı” yap; ücretsiz kelime sınırını belirle. APK güncellemeden geçerli olur.</p></div></div>
+      <div class="card soon"><div class="ico">🎛️</div><div><b>Özellik anahtarları</b><p>Her özelliği “Herkese açık / Premium / Kapalı” yap; ücretsiz kelime sınırını belirle. APK güncellemeden geçerli olur.</p><span class="pill">Sıradaki adım</span></div></div>
       <div class="card soon"><div class="ico">📣</div><div><b>Duyurular</b><p>Herkese, ücretsiz ya da premium kullanıcılara ana ekranda çıkan mesaj gönder.</p></div></div>
       <div class="card soon"><div class="ico">💬</div><div><b>Geri bildirimler</b><p>Kullanıcıların “Hata bildir / Öneri” mesajları burada toplanır.</p></div></div>
       <div class="card soon"><div class="ico">⚙️</div><div><b>Uygulama ayarları</b><p>Bakım modu ve “Güncelle” uyarısı için en düşük sürüm.</p></div></div>
@@ -192,6 +208,7 @@
 <nav class="tabs hidden" id="tabs" aria-label="Bölümler">
   <button type="button" class="on" data-t="tGen"><span>📊</span>Genel</button>
   <button type="button" data-t="tUsers"><span>👥</span>Kullanıcılar</button>
+  <button type="button" data-t="tPacks"><span>📦</span>Paketler</button>
   <button type="button" data-t="tMore"><span>🧩</span>Diğer</button>
   <button type="button" data-t="tMe"><span>👤</span>Hesabım</button>
 </nav>
@@ -359,6 +376,112 @@
   $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeSheet(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
 
+
+  /* ---- Kelime paketleri ---- */
+  let PACKS = [];
+  const ZW = /[\u200B-\u200D\u2060\uFEFF]/g, TRC = /[çğıöşüÇĞİÖŞÜ]/;
+  const trLow = s => s.replace(/İ/g, "i").replace(/I/g, "ı").toLocaleLowerCase("tr");
+  const base = s => trLow(s).replace(/\s*\([^)]*\)/g, "").trim();
+  function checkPack(raw, opt) {                                       // denetle: satır sayısı, okunamayan, ters yazılmış, tekrar
+    const lines = String(raw).replace(ZW, "").replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+    const bad = [], rev = [], dup = [], out = [], at = new Map();
+    lines.forEach((l, i) => {
+      const m = l.match(/^(.+?)\s+[-–—]\s+(.+)$/) || l.match(/^(.+?)\s*[\t=:]\s*(.+)$/) || l.match(/^([A-Za-z][A-Za-z' ]*?)\s*[-–—]\s*(.+)$/);
+      if (!m) { bad.push(`${i + 1}. ${l}`); return; }
+      let en = m[1].trim(), tr = m[2].trim();
+      if (TRC.test(en) && !TRC.test(tr)) { rev.push(`${i + 1}. ${en} - ${tr}`); if (opt.swap) [en, tr] = [tr, en]; }
+      const k = en.toLowerCase();
+      if (at.has(k)) {
+        const p = at.get(k); dup.push(`${i + 1}. ${en} (ilk: ${p.en})`);
+        if (opt.merge) { const have = new Set(p.tr.split(/[,/]/).map(base)); const add = tr.split(",").map(x => x.trim()).filter(x => x && !have.has(base(x))); if (add.length) p.tr += ", " + add.join(", "); }
+        else out.push({ en, tr });
+        return;
+      }
+      const p = { en, tr }; at.set(k, p); out.push(p);
+    });
+    return { lines: lines.length, bad, rev, dup, out, text: out.map(p => `${p.en} - ${p.tr}`).join("\n") };
+  }
+  async function loadPacks() {
+    const ul = $("packList"); ul.innerHTML = '<li><div class="spin"></div></li>';
+    try { PACKS = (await listDocs("packs")).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); }
+    catch (e) { ul.innerHTML = `<li class="empty">Paketler okunamadı: ${esc(e.status === "PERMISSION_DENIED" ? "Firestore kuralları izin vermiyor (kuralları güncelle)." : (ERR[e.code] || e.code))}</li>`; return; }
+    ul.innerHTML = "";
+    if (!PACKS.length) { ul.innerHTML = '<li class="empty">Henüz paket yok. “＋ Yeni paket” ile ilk paketini oluştur.</li>'; return; }
+    PACKS.forEach(p => {
+      const li = document.createElement("li"), b = document.createElement("button"); b.type = "button"; b.className = "urow";
+      b.innerHTML = `<span class="av" style="border-radius:12px">📦</span><span class="uinfo"><b>${esc(p.name)}</b><small>${+p.count || 0} kelime · ${esc(rel(p.updatedAt))} güncellendi${p.hidden ? " · gizli" : ""}</small></span><span class="badge ${p.access === "free" ? "" : "pro"}">${p.access === "free" ? "Ücretsiz" : "PREMIUM"}</span>`;
+      b.addEventListener("click", () => openPack(p));
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  async function openPack(p) {
+    const isNew = !p, sh = $("sheet");
+    p = p || { id: "", name: "", desc: "", access: "premium", hidden: false };
+    sh.innerHTML = `<h3>${isNew ? "Yeni paket" : "Paketi düzenle"}</h3><div style="height:10px"></div>
+      <label class="f">Paket adı<input id="pkName" maxlength="60" placeholder="ör. YDS Kelimeleri"></label>
+      <label class="f">Kısa açıklama<input id="pkDesc" maxlength="120" placeholder="ör. Sık çıkan sıfatlar, fiiller ve phrasal verb’ler"></label>
+      <span class="muted" style="font-size:.9rem;font-weight:700">Kim alabilir?</span>
+      <div class="seg2" id="pkAcc"><button type="button" data-a="premium">⭐ Premium</button><button type="button" data-a="free">Herkes (ücretsiz)</button></div>
+      <label class="opt"><input type="checkbox" id="pkHidden"> Uygulamada gizle (taslak)</label>
+      <label class="f" style="margin-top:8px">Kelimeler (her satır: kelime - anlam)<textarea id="pkText" class="big" spellcheck="false" placeholder="ability - yetenek&#10;abroad - yurt dışı, yurt dışında"></textarea></label>
+      <label class="btn ghost small" style="display:inline-block;margin-bottom:6px">📄 Dosyadan yükle (.txt)<input type="file" id="pkFile" accept=".txt,.csv,text/plain" hidden></label>
+      <label class="opt"><input type="checkbox" id="pkSwap" checked> Ters yazılmış satırları çevir (Türkçe - İngilizce → İngilizce - Türkçe)</label>
+      <label class="opt"><input type="checkbox" id="pkMerge" checked> Tekrar eden kelimeleri birleştir (anlamlar korunur)</label>
+      <div class="rep" id="pkRep"><span class="muted">Kelimeleri yapıştır ya da dosya seç; burada denetim sonucu görünür.</span></div>
+      <button type="button" class="btn wide" id="pkSave">${isNew ? "Paketi yayınla" : "Değişiklikleri kaydet"}</button>
+      <p class="msg" id="pkMsg" role="status"></p>
+      ${isNew ? "" : '<button type="button" class="btn danger small" id="pkDel" style="margin-top:6px">🗑 Paketi sil</button>'}
+      <button type="button" class="btn ghost wide" id="pkClose" style="margin-top:10px">Kapat</button>`;
+    $("pkName").value = p.name || ""; $("pkDesc").value = p.desc || ""; $("pkHidden").checked = !!p.hidden;
+    let acc = p.access === "free" ? "free" : "premium";
+    const setAcc = a => { acc = a; sh.querySelectorAll("#pkAcc button").forEach(b => b.classList.toggle("on", b.dataset.a === a)); };
+    sh.querySelectorAll("#pkAcc button").forEach(b => b.addEventListener("click", () => setAcc(b.dataset.a))); setAcc(acc);
+    const msg = (t, ok) => { const m = $("pkMsg"); m.textContent = t; m.className = "msg " + (ok ? "ok" : "bad"); };
+    let res = null;
+    const list = (title, arr) => arr.length ? `<details><summary>${title} (${arr.length})</summary><ul>${arr.slice(0, 200).map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : "";
+    const run = () => {
+      const t = $("pkText").value;
+      if (!t.trim()) { res = null; $("pkRep").innerHTML = '<span class="muted">Kelimeleri yapıştır ya da dosya seç; burada denetim sonucu görünür.</span>'; return; }
+      res = checkPack(t, { swap: $("pkSwap").checked, merge: $("pkMerge").checked });
+      $("pkRep").innerHTML = `<b class="big">${res.lines} satır → ${res.out.length} kelime</b>
+        ${res.bad.length ? `<span class="err">✕ ${res.bad.length} satır okunamadı (atlanacak)</span>` : '<span class="ok">✓ Bütün satırlar okundu</span>'}
+        ${res.rev.length ? `<span class="warn">↔ ${res.rev.length} satır ters yazılmış${$("pkSwap").checked ? ", çevrildi" : ""}</span>` : ""}
+        ${res.dup.length ? `<span class="warn">⧉ ${res.dup.length} tekrar${$("pkMerge").checked ? ", birleştirildi" : ""}</span>` : '<span class="ok">✓ Tekrar yok</span>'}
+        ${list("Okunamayanlar", res.bad)}${list("Ters yazılmış satırlar", res.rev)}${list("Tekrar edenler", res.dup)}`;
+    };
+    let tm = null;
+    $("pkText").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(run, 300); });
+    $("pkSwap").addEventListener("change", run); $("pkMerge").addEventListener("change", run);
+    $("pkFile").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; $("pkText").value = await f.text(); run(); });
+    $("pkClose").addEventListener("click", closeSheet);
+    $("sheetBg").classList.remove("hidden");
+    if (!isNew) {
+      $("pkText").value = "Yükleniyor…"; $("pkText").disabled = true;
+      try { const it = await getDoc(`packItems/${p.id}`); $("pkText").value = (it && it.text) || ""; } catch (e) { $("pkText").value = ""; msg("Kelimeler okunamadı: " + (ERR[e.code] || e.code), false); }
+      $("pkText").disabled = false; run();
+    }
+    $("pkSave").addEventListener("click", async () => {
+      const name = $("pkName").value.trim();
+      if (!name) return msg("Paket adını yaz.", false);
+      run(); if (!res || !res.out.length) return msg("Pakette en az bir kelime olmalı.", false);
+      const id = p.id || (trLow(name).replace(/[çğıöşü]/g, c => ({ ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u" })[c]).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "paket") + "-" + Date.now().toString(36);
+      $("pkSave").disabled = true; msg("Kaydediliyor…", true);
+      try {
+        await patchDoc(`packItems/${id}`, { text: res.text, count: res.out.length, updatedAt: Date.now() });
+        await patchDoc(`packs/${id}`, { name, desc: $("pkDesc").value.trim(), access: acc, hidden: $("pkHidden").checked, count: res.out.length, updatedAt: Date.now(), by: S.email || "" });
+        p.id = id; msg(`✓ Kaydedildi: ${res.out.length} kelime, ${acc === "free" ? "herkese açık" : "premium"}.`, true);
+        loadPacks(); setTimeout(closeSheet, 1200);
+      } catch (e) { msg("Kaydedilemedi: " + (e.status === "PERMISSION_DENIED" ? "Firestore kuralları izin vermiyor (kuralları güncelle)." : (ERR[e.code] || e.code)), false); }
+      finally { $("pkSave").disabled = false; }
+    });
+    if ($("pkDel")) $("pkDel").addEventListener("click", async () => {
+      if (!confirm(`“${p.name}” paketi silinsin mi? Kullanıcıların daha önce eklediği kelimeler silinmez.`)) return;
+      try { await delDoc(`packs/${p.id}`); await delDoc(`packItems/${p.id}`); closeSheet(); loadPacks(); }
+      catch (e) { msg("Silinemedi: " + (ERR[e.code] || e.code), false); }
+    });
+  }
+  async function delDoc(path) { return call(`${DOCS}/${path}`, { method: "DELETE", headers: await auth() }); }
+  $("packNew").addEventListener("click", () => openPack(null));
   /* ---- Olaylar ---- */
   $("loginForm").addEventListener("submit", async e => {
     e.preventDefault();
@@ -384,7 +507,8 @@
   $("tabs").addEventListener("click", e => {
     const b = e.target.closest("[data-t]"); if (!b) return;
     document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
-    ["tGen", "tUsers", "tMore", "tMe"].forEach(t => $(t).classList.toggle("hidden", t !== b.dataset.t));
+    ["tGen", "tUsers", "tPacks", "tMore", "tMe"].forEach(t => $(t).classList.toggle("hidden", t !== b.dataset.t));
+    if (b.dataset.t === "tPacks") loadPacks();
     window.scrollTo(0, 0);
   });
   boot();
