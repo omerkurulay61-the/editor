@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Kelime Öğretici · Editör Paneli</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef4fb; --card: #ffffff; --ink: #16233d; --soft: #5c6b85; --line: #d6e1ef;
+    --acc: #d4664f; --acc2: #f1a08c; --accInk: #fff; --ok: #188a55; --okBg: #e2f6ec; --bad: #c33a48; --badBg: #fde7ea;
+    --gold: #b67a00; --goldBg: #fff2d1; --shadow: 0 6px 20px rgba(22, 35, 61, .08);
+    box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { color-scheme: dark; --bg: #0f1a30; --card: #182641; --ink: #eef3ff; --soft: #a2b1cc; --line: #2a3b5e;
+      --okBg: #123a2a; --badBg: #3d1c24; --goldBg: #3a2d10; --gold: #f1c35a; --ok: #5bd69a; --bad: #ff8a95; --shadow: 0 6px 20px rgba(0,0,0,.3); }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 96px; }
+  h1, h2, h3 { margin: 0; line-height: 1.2; }
+  .top { display: flex; align-items: center; gap: 12px; margin: 6px 0 18px; }
+  .logo { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 1.5rem; background: linear-gradient(180deg, var(--acc2), var(--acc)); box-shadow: 0 3px 0 rgba(0,0,0,.18); }
+  .top h1 { font-size: 1.2rem; }
+  .top small { display: block; color: var(--soft); font-size: .82rem; font-weight: 600; }
+  .top .out { margin-left: auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .btn { appearance: none; border: 0; border-radius: 14px; padding: 13px 18px; font: inherit; font-weight: 800; cursor: pointer; color: var(--accInk); background: linear-gradient(180deg, var(--acc2), var(--acc)); box-shadow: 0 3px 0 rgba(0,0,0,.2); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--acc); border: 2px solid var(--line); box-shadow: none; }
+  .btn.small { padding: 8px 12px; font-size: .88rem; border-radius: 11px; }
+  .btn.wide { width: 100%; }
+  .btn.danger { background: linear-gradient(180deg, #ee7a86, var(--bad)); }
+  label.f { display: grid; gap: 6px; font-weight: 700; font-size: .9rem; color: var(--soft); margin-bottom: 12px; }
+  input, textarea, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--acc); }
+  .msg { min-height: 1.2em; margin: 10px 0 0; font-weight: 700; font-size: .92rem; }
+  .msg.bad { color: var(--bad); } .msg.ok { color: var(--ok); }
+  .link { background: none; border: 0; color: var(--acc); font: inherit; font-weight: 800; cursor: pointer; padding: 6px 0; }
+  .center { text-align: center; }
+  .muted { color: var(--soft); }
+  .hidden { display: none !important; }
+  /* sekmeler */
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center; gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--card); border-top: 1px solid var(--line); }
+  .tabs button { flex: 1; max-width: 140px; appearance: none; border: 0; background: none; color: var(--soft); font: inherit; font-size: .72rem; font-weight: 800; display: grid; justify-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; cursor: pointer; }
+  .tabs button span { font-size: 1.3rem; line-height: 1; }
+  .tabs button.on { color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent); }
+  .sec-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 2px 12px; }
+  .sec-title h2 { font-size: 1.15rem; }
+  /* genel bakış */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 560px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+  .tile b { display: block; font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--soft); font-size: .82rem; font-weight: 700; }
+  .check { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .check li { display: flex; gap: 10px; align-items: flex-start; }
+  .check i { flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: .85rem; }
+  .check .y i { background: var(--okBg); color: var(--ok); } .check .n i { background: var(--badBg); color: var(--bad); } .check .w i { background: var(--goldBg); color: var(--gold); }
+  .check small { display: block; color: var(--soft); }
+  /* kullanıcılar */
+  .search { margin-bottom: 12px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { appearance: none; border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .85rem; font-weight: 800; cursor: pointer; }
+  .chip.on { border-color: var(--acc); color: var(--acc); }
+  .ulist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .urow { width: 100%; text-align: left; display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; font: inherit; color: var(--ink); cursor: pointer; box-shadow: var(--shadow); }
+  .av { flex: 0 0 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #fff; background: linear-gradient(180deg, var(--acc2), var(--acc)); text-transform: uppercase; }
+  .uinfo { flex: 1; min-width: 0; }
+  .uinfo b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .uinfo small { color: var(--soft); font-size: .8rem; }
+  .badge { flex: 0 0 auto; font-size: .72rem; font-weight: 900; padding: 4px 9px; border-radius: 999px; background: var(--line); color: var(--soft); }
+  .badge.pro { background: var(--goldBg); color: var(--gold); }
+  .badge.adm { background: var(--okBg); color: var(--ok); }
+  .empty { padding: 26px 16px; text-align: center; color: var(--soft); border: 2px dashed var(--line); border-radius: 18px; }
+  /* alt pencere */
+  .sheet-bg { position: fixed; inset: 0; z-index: 30; background: rgba(5, 10, 25, .5); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { width: 100%; max-width: 560px; max-height: 88dvh; overflow-y: auto; background: var(--card); border-radius: 24px 24px 0 0; padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .sheet h3 { font-size: 1.1rem; overflow-wrap: anywhere; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 14px 0; font-size: .92rem; }
+  .kv dt { color: var(--soft); font-weight: 700; } .kv dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 14px; }
+  .soon { display: flex; gap: 14px; align-items: flex-start; }
+  .soon .ico { font-size: 1.8rem; }
+  .soon p { margin: 4px 0 0; color: var(--soft); font-size: .92rem; }
+  .pill { display: inline-block; margin-top: 8px; font-size: .75rem; font-weight: 900; padding: 3px 9px; border-radius: 999px; background: var(--goldBg); color: var(--gold); }
+  code.uid { display: block; padding: 10px 12px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--line); font-size: .88rem; overflow-wrap: anywhere; user-select: all; }
+  ol.steps { padding-left: 20px; margin: 10px 0 0; } ol.steps li { margin: 6px 0; }
+  .spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--acc); animation: sp .8s linear infinite; margin: 40px auto; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.5s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo" aria-hidden="true">🛡️</div>
+    <div><h1>Editör Paneli</h1><small>Kelime Öğretici</small></div>
+    <button type="button" class="btn ghost small out hidden" id="outBtn">Çıkış</button>
+  </header>
+
+  <div id="vLoad"><div class="spin" aria-label="Yükleniyor"></div></div>
+
+  <!-- Giriş -->
+  <section id="vLogin" class="hidden">
+    <div class="card">
+      <h2 style="font-size:1.15rem">Giriş yap</h2>
+      <p class="muted" style="margin:6px 0 16px">Kelime Öğretici’deki e-posta ve şifrenle gir.</p>
+      <form id="loginForm" novalidate>
+        <label class="f">E-posta<input type="email" id="lEmail" autocomplete="username" required></label>
+        <label class="f">Şifre<input type="password" id="lPass" autocomplete="current-password" required></label>
+        <button class="btn wide" type="submit" id="lBtn">Giriş yap</button>
+      </form>
+      <p class="msg" id="lMsg" role="alert"></p>
+      <div class="center"><button type="button" class="link" id="resetBtn">Şifremi unuttum</button></div>
+    </div>
+  </section>
+
+  <!-- Yetki yok -->
+  <section id="vDenied" class="hidden">
+    <div class="card">
+      <h2 style="font-size:1.15rem">🔒 Bu panele erişim yetkin yok</h2>
+      <p class="muted" style="margin:6px 0 12px">Giriş yaptın ama hesabın editör ya da admin olarak tanımlı değil.</p>
+      <p style="margin:0 0 6px;font-weight:800">Kullanıcı numaran:</p>
+      <code class="uid" id="dUid"></code>
+      <button type="button" class="btn small" id="copyUid" style="margin-top:8px">📋 Kopyala</button>
+      <p style="margin:16px 0 0;font-weight:800">Kendini admin yapmak için (yalnızca bir kez):</p>
+      <ol class="steps">
+        <li>Firebase konsolu → <b>Firestore Database</b> → <b>Koleksiyon başlat</b>.</li>
+        <li>Koleksiyon kimliği: <b>admins</b></li>
+        <li>Belge kimliği: yukarıdaki kullanıcı numarası</li>
+        <li>Alan: <b>role</b> · tür: string · değer: <b>admin</b> → Kaydet</li>
+        <li>Bu sayfayı yenile.</li>
+      </ol>
+      <p class="msg bad" id="dMsg"></p>
+    </div>
+  </section>
+
+  <!-- Panel -->
+  <main id="vApp" class="hidden">
+    <section id="tGen">
+      <div class="sec-title"><h2>📊 Genel bakış</h2><button type="button" class="btn ghost small" id="refreshBtn">↻ Yenile</button></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="card" style="margin-top:14px">
+        <h3 style="font-size:1rem;margin-bottom:12px">Kurulum durumu</h3>
+        <ul class="check" id="checks"></ul>
+      </div>
+    </section>
+
+    <section id="tUsers" class="hidden">
+      <div class="sec-title"><h2>👥 Kullanıcılar</h2><span class="muted" id="uCount"></span></div>
+      <input type="search" class="search" id="uSearch" placeholder="🔍 E-postaya göre ara" autocomplete="off">
+      <div class="filters" id="uFilters">
+        <button type="button" class="chip on" data-f="all">Hepsi</button>
+        <button type="button" class="chip" data-f="pro">Premium</button>
+        <button type="button" class="chip" data-f="free">Ücretsiz</button>
+        <button type="button" class="chip" data-f="today">Bugün aktif</button>
+      </div>
+      <ul class="ulist" id="uList"></ul>
+    </section>
+
+    <section id="tMore" class="hidden">
+      <div class="sec-title"><h2>🧩 Yakında</h2></div>
+      <div class="card soon"><div class="ico">📦</div><div><b>Kelime paketleri</b><p>Hazır listeler (A1, YDS, Alışveriş…) oluştur, ücretsiz ya da premium olarak yayınla. Kullanıcılar tek dokunuşla ekler.</p><span class="pill">Sıradaki adım</span></div></div>
+      <div class="card soon"><div class="ico">🎛️</div><div><b>Özellik anahtarları</b><p>Her özelliği “Herkese açık / Premium / Kapalı” yap; ücretsiz kelime sınırını belirle. APK güncellemeden geçerli olur.</p></div></div>
+      <div class="card soon"><div class="ico">📣</div><div><b>Duyurular</b><p>Herkese, ücretsiz ya da premium kullanıcılara ana ekranda çıkan mesaj gönder.</p></div></div>
+      <div class="card soon"><div class="ico">💬</div><div><b>Geri bildirimler</b><p>Kullanıcıların “Hata bildir / Öneri” mesajları burada toplanır.</p></div></div>
+      <div class="card soon"><div class="ico">⚙️</div><div><b>Uygulama ayarları</b><p>Bakım modu ve “Güncelle” uyarısı için en düşük sürüm.</p></div></div>
+    </section>
+
+    <section id="tMe" class="hidden">
+      <div class="sec-title"><h2>👤 Hesabım</h2></div>
+      <div class="card">
+        <dl class="kv" style="margin-top:0">
+          <dt>E-posta</dt><dd id="meEmail"></dd>
+          <dt>Yetki</dt><dd id="meRole"></dd>
+          <dt>Kullanıcı no</dt><dd id="meUid"></dd>
+          <dt>Proje</dt><dd>kelime-oyunu-31491</dd>
+        </dl>
+        <button type="button" class="btn ghost wide" id="outBtn2">Çıkış yap</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs hidden" id="tabs" aria-label="Bölümler">
+  <button type="button" class="on" data-t="tGen"><span>📊</span>Genel</button>
+  <button type="button" data-t="tUsers"><span>👥</span>Kullanıcılar</button>
+  <button type="button" data-t="tMore"><span>🧩</span>Diğer</button>
+  <button type="button" data-t="tMe"><span>👤</span>Hesabım</button>
+</nav>
+
+<div class="sheet-bg hidden" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
+
+<script>
+(() => {
+  "use strict";
+  const CFG = { apiKey: "AIzaSyDSYHA3dPwGwL56oXcB-XNC-G0SDXSUAKQ", projectId: "kelime-oyunu-31491" };
+  const DOCS = `https://firestore.googleapis.com/v1/projects/${CFG.projectId}/databases/(default)/documents`;
+  const SKEY = "kelime-editor-oturum";
+  const $ = id => document.getElementById(id);
+  const views = ["vLoad", "vLogin", "vDenied", "vApp"];
+  const view = v => { views.forEach(x => $(x).classList.toggle("hidden", x !== v)); $("tabs").classList.toggle("hidden", v !== "vApp"); $("outBtn").classList.toggle("hidden", v === "vLogin" || v === "vLoad"); };
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  /* ---- Oturum (Firebase Authentication, REST) ---- */
+  let S = null; try { S = JSON.parse(localStorage.getItem(SKEY) || "null"); } catch (e) {}
+  const saveS = x => { S = x; try { x ? localStorage.setItem(SKEY, JSON.stringify(x)) : localStorage.removeItem(SKEY); } catch (e) {} };
+  const ERR = { EMAIL_NOT_FOUND: "Bu e-postayla hesap yok.", INVALID_PASSWORD: "Şifre yanlış.", INVALID_LOGIN_CREDENTIALS: "E-posta ya da şifre yanlış.",
+    USER_DISABLED: "Bu hesap devre dışı.", TOO_MANY_ATTEMPTS_TRY_LATER: "Çok fazla deneme yapıldı; biraz bekle.", INVALID_EMAIL: "E-posta geçersiz.",
+    MISSING_PASSWORD: "Şifreni yaz.", PERMISSION_DENIED: "İzin yok (Firestore kuralları).", NET: "İnternet bağlantısı yok." };
+  async function call(url, opts = {}) {
+    let r; try { r = await fetch(url, opts); } catch (e) { throw { code: "NET" }; }
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 404) return { __nf: true };
+    if (!r.ok) { const m = (j.error && (j.error.message || j.error.status)) || "HTTP_" + r.status; throw { code: String(m).split(/[ :]/)[0], status: (j.error && j.error.status) || r.status }; }
+    return j;
+  }
+  const authPost = (m, body, h) => call(`https://identitytoolkit.googleapis.com/v1/accounts:${m}?key=${CFG.apiKey}`, { method: "POST", headers: { "Content-Type": "application/json", ...(h || {}) }, body: JSON.stringify(body) });
+  const startS = j => saveS({ idToken: j.idToken || j.id_token, refreshToken: j.refreshToken || j.refresh_token, uid: j.localId || j.user_id, email: j.email || (S && S.email), exp: Date.now() + (+(j.expiresIn || j.expires_in) || 3600) * 1000 });
+  async function token() {
+    if (!S) throw { code: "NOSESSION" };
+    if (Date.now() < S.exp - 120000) return S.idToken;
+    const j = await call(`https://securetoken.googleapis.com/v1/token?key=${CFG.apiKey}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(S.refreshToken) });
+    if (j.__nf || !j.id_token) throw { code: "NOSESSION" };
+    startS({ ...j, email: S.email }); return S.idToken;
+  }
+
+  /* ---- Firestore (REST) ---- */
+  const fromV = v => !v ? null : "stringValue" in v ? v.stringValue : "integerValue" in v ? Number(v.integerValue) : "doubleValue" in v ? v.doubleValue
+    : "booleanValue" in v ? v.booleanValue : "nullValue" in v ? null : "timestampValue" in v ? Date.parse(v.timestampValue)
+    : "mapValue" in v ? fromF(v.mapValue.fields || {}) : "arrayValue" in v ? (v.arrayValue.values || []).map(fromV) : null;
+  const fromF = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, fromV(v)]));
+  const toV = v => v === null || v === undefined ? { nullValue: null } : typeof v === "boolean" ? { booleanValue: v } : typeof v === "number" ? (Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v })
+    : Array.isArray(v) ? { arrayValue: { values: v.map(toV) } } : typeof v === "object" ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toV(x)])) } } : { stringValue: String(v) };
+  const auth = async () => ({ Authorization: "Bearer " + await token() });
+  async function getDoc(path) { const j = await call(`${DOCS}/${path}`, { headers: await auth() }); return j.__nf ? null : { id: j.name.split("/").pop(), ...fromF(j.fields) }; }
+  async function listDocs(col) {
+    const out = []; let pt = "";
+    for (let i = 0; i < 50; i++) {
+      const j = await call(`${DOCS}/${col}?pageSize=300${pt ? "&pageToken=" + encodeURIComponent(pt) : ""}`, { headers: await auth() });
+      (j.documents || []).forEach(d => out.push({ id: d.name.split("/").pop(), ...fromF(d.fields) }));
+      if (!j.nextPageToken) break; pt = j.nextPageToken;
+    }
+    return out;
+  }
+  async function patchDoc(path, data) {
+    const mask = Object.keys(data).map(k => "updateMask.fieldPaths=" + encodeURIComponent(k)).join("&");
+    return call(`${DOCS}/${path}?${mask}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...(await auth()) }, body: JSON.stringify({ fields: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toV(v)])) }) });
+  }
+
+  /* ---- Akış ---- */
+  let ROLE = "", USERS = [], usersErr = "";
+  async function boot() {
+    view("vLoad");
+    if (!S) return view("vLogin");
+    try { await token(); } catch (e) { if (e.code === "NET") { $("lMsg").textContent = ERR.NET; } saveS(null); return view("vLogin"); }
+    let adm = null, why = "";
+    try { adm = await getDoc(`admins/${S.uid}`); } catch (e) { why = e.status === "PERMISSION_DENIED" || e.code === "PERMISSION_DENIED" ? "Firestore kuralları henüz güncellenmemiş olabilir (admins koleksiyonunu okumaya izin yok)." : "Kontrol edilemedi: " + (ERR[e.code] || e.code); }
+    ROLE = adm && (adm.role === "admin" || adm.role === "editor") ? adm.role : "";
+    if (!ROLE) { $("dUid").textContent = S.uid; $("dMsg").textContent = why; return view("vDenied"); }
+    $("meEmail").textContent = S.email || "–"; $("meRole").textContent = ROLE === "admin" ? "Admin (her şey)" : "Editör"; $("meUid").textContent = S.uid;
+    view("vApp"); await loadAll();
+  }
+  async function loadAll() {
+    $("tiles").innerHTML = '<div class="spin" style="grid-column:1/-1"></div>';
+    usersErr = "";
+    if (ROLE === "admin") { try { USERS = await listDocs("users"); } catch (e) { USERS = []; usersErr = e.code === "PERMISSION_DENIED" || e.status === "PERMISSION_DENIED" ? "Kurallar kullanıcı listesine izin vermiyor." : (ERR[e.code] || e.code); } }
+    renderGen(); renderUsers();
+  }
+  const DAY = 864e5, startOfDay = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return +d; };
+  const isPro = u => u.plan === "premium" && (!u.premiumUntil || u.premiumUntil > Date.now());
+  function rel(t) {
+    if (!t) return "hiç";
+    const s = (Date.now() - t) / 1000;
+    if (s < 90) return "şimdi"; if (s < 3600) return `${Math.round(s / 60)} dk önce`; if (s < 86400) return `${Math.round(s / 3600)} saat önce`;
+    if (s < 86400 * 30) return `${Math.round(s / 86400)} gün önce`;
+    return new Date(t).toLocaleDateString("tr-TR");
+  }
+  function renderGen() {
+    const today = startOfDay(), wk = Date.now() - 7 * DAY;
+    const n = USERS.length, act = USERS.filter(u => u.lastSeen >= today).length, actW = USERS.filter(u => u.lastSeen >= wk).length;
+    const pro = USERS.filter(isPro).length, fresh = USERS.filter(u => u.createdAt >= wk).length, wsum = USERS.reduce((a, u) => a + (+u.wordCount || 0), 0);
+    const T = [[n, "Toplam kullanıcı"], [act, "Bugün aktif"], [actW, "Bu hafta aktif"], [pro, "Premium"], [fresh, "Son 7 günde yeni"], [wsum.toLocaleString("tr-TR"), "Toplam kelime"]];
+    $("tiles").innerHTML = ROLE === "admin" ? T.map(([v, l]) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`).join("") : '<div class="tile" style="grid-column:1/-1"><span>Editör hesabıyla kullanıcı istatistikleri görünmez.</span></div>';
+    const C = [
+      ["y", "Giriş yapıldı", S.email],
+      ["y", `${ROLE === "admin" ? "Admin" : "Editör"} yetkisi tanındı`, "admins koleksiyonunda kaydın var"],
+      ROLE !== "admin" ? null : usersErr ? ["n", "Kullanıcı listesi okunamadı", usersErr + " Firestore kurallarını güncelle."] : ["y", "Firestore kuralları çalışıyor", "Kullanıcı özet kartları okunabiliyor"],
+      ROLE !== "admin" || usersErr ? null : n > 1 ? ["y", "Uygulama özet kartı yazıyor", `${n} kullanıcının kartı var`] : ["w", "Uygulamanın yeni sürümü bekleniyor", "Kullanıcı kartlarını uygulama yazacak; yeni APK’yı kurup bir kez giriş yapınca burada görünürler."]
+    ].filter(Boolean);
+    $("checks").innerHTML = C.map(([k, t, s]) => `<li class="${k}"><i>${k === "y" ? "✓" : k === "n" ? "✕" : "!"}</i><div><b>${esc(t)}</b><small>${esc(s)}</small></div></li>`).join("");
+  }
+  let uFilter = "all";
+  function renderUsers() {
+    const ul = $("uList"); ul.innerHTML = "";
+    if (ROLE !== "admin") { ul.innerHTML = '<li class="empty">Kullanıcıları yalnızca admin görebilir.</li>'; $("uCount").textContent = ""; return; }
+    if (usersErr) { ul.innerHTML = `<li class="empty">${esc(usersErr)}</li>`; return; }
+    const q = $("uSearch").value.trim().toLocaleLowerCase("tr"), today = startOfDay();
+    const list = USERS.filter(u => (!q || String(u.email || "").toLocaleLowerCase("tr").includes(q) || u.id.toLowerCase().includes(q))
+      && (uFilter === "all" || (uFilter === "pro" && isPro(u)) || (uFilter === "free" && !isPro(u)) || (uFilter === "today" && u.lastSeen >= today)))
+      .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    $("uCount").textContent = `${list.length} / ${USERS.length}`;
+    if (!list.length) { ul.innerHTML = `<li class="empty">${USERS.length ? "Bu aramaya uyan kullanıcı yok." : "Henüz kullanıcı kartı yok. Uygulamanın yeni sürümüyle giriş yapan herkes burada görünecek."}</li>`; return; }
+    list.forEach(u => {
+      const li = document.createElement("li"), b = document.createElement("button"); b.type = "button"; b.className = "urow";
+      const pro = isPro(u), me = u.id === S.uid;
+      b.innerHTML = `<span class="av">${esc((u.email || "?")[0])}</span><span class="uinfo"><b>${esc(u.email || u.id)}</b><small>${esc(rel(u.lastSeen))} · ${+u.wordCount || 0} kelime${u.platform ? " · " + esc(u.platform) : ""}</small></span><span class="badge ${me ? "adm" : pro ? "pro" : ""}">${me ? "SEN" : pro ? "PREMIUM" : "Ücretsiz"}</span>`;
+      b.addEventListener("click", () => openUser(u));
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  function openUser(u) {
+    const pro = isPro(u), until = u.premiumUntil ? new Date(u.premiumUntil).toLocaleDateString("tr-TR") : "süresiz";
+    const sh = $("sheet");
+    sh.innerHTML = `<h3>${esc(u.email || u.id)}</h3>
+      <dl class="kv">
+        <dt>Plan</dt><dd>${pro ? `⭐ Premium (${esc(until)})` : u.plan === "premium" ? "Premium (süresi doldu)" : "Ücretsiz"}</dd>
+        <dt>Son giriş</dt><dd>${esc(rel(u.lastSeen))}</dd>
+        <dt>Kayıt</dt><dd>${u.createdAt ? new Date(u.createdAt).toLocaleDateString("tr-TR") : "–"}</dd>
+        <dt>Kelime</dt><dd>${+u.wordCount || 0}</dd>
+        <dt>Cümle</dt><dd>${+u.sentCount || 0}</dd>
+        <dt>Cihaz</dt><dd>${esc(u.platform || "–")}</dd>
+        <dt>Kullanıcı no</dt><dd style="font-size:.8rem">${esc(u.id)}</dd>
+      </dl>
+      <b>Premium ver</b>
+      <div class="grid2">
+        <button type="button" class="btn small" data-p="30">1 ay</button>
+        <button type="button" class="btn small" data-p="365">1 yıl</button>
+        <button type="button" class="btn small" data-p="0">Süresiz</button>
+        <button type="button" class="btn small ghost" data-p="-1" ${u.plan === "premium" ? "" : "disabled"}>Premium’u kaldır</button>
+      </div>
+      <label class="f">Not (yalnızca sen görürsün)<textarea id="uNote" rows="2" placeholder="ör. arkadaşım, öğrencim">${esc(u.note || "")}</textarea></label>
+      <button type="button" class="btn ghost small" id="noteSave">Notu kaydet</button>
+      <p class="msg" id="uMsg" role="status"></p>
+      <button type="button" class="btn ghost wide" id="sheetClose" style="margin-top:8px">Kapat</button>`;
+    const msg = (t, ok) => { const m = $("uMsg"); m.textContent = t; m.className = "msg " + (ok ? "ok" : "bad"); };
+    const save = async (data, okText) => {
+      sh.querySelectorAll("button").forEach(x => x.disabled = true);
+      try { await patchDoc(`users/${u.id}`, data); Object.assign(u, data); msg(okText, true); renderUsers(); renderGen(); setTimeout(() => openUser(u), 900); }
+      catch (e) { msg("Kaydedilemedi: " + (ERR[e.code] || e.code), false); sh.querySelectorAll("button").forEach(x => x.disabled = false); }
+    };
+    sh.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => {
+      const d = +b.dataset.p;
+      if (d < 0) save({ plan: "free", premiumUntil: null }, "Premium kaldırıldı.");
+      else save({ plan: "premium", premiumUntil: d ? Date.now() + d * DAY : 0 }, d ? `Premium verildi (${d === 30 ? "1 ay" : "1 yıl"}).` : "Süresiz premium verildi.");
+    }));
+    $("noteSave").addEventListener("click", () => save({ note: $("uNote").value.trim() }, "Not kaydedildi."));
+    $("sheetClose").addEventListener("click", closeSheet);
+    $("sheetBg").classList.remove("hidden");
+  }
+  const closeSheet = () => $("sheetBg").classList.add("hidden");
+  $("sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeSheet(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+  /* ---- Olaylar ---- */
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("lEmail").value.trim(), password = $("lPass").value, m = $("lMsg");
+    if (!email || !password) { m.textContent = "E-posta ve şifreni yaz."; m.className = "msg bad"; return; }
+    $("lBtn").disabled = true; m.textContent = ""; 
+    try { startS(await authPost("signInWithPassword", { email, password, returnSecureToken: true })); $("lPass").value = ""; await boot(); }
+    catch (err) { m.textContent = ERR[err.code] || "Giriş yapılamadı (" + err.code + ")."; m.className = "msg bad"; }
+    finally { $("lBtn").disabled = false; }
+  });
+  $("resetBtn").addEventListener("click", async () => {
+    const email = $("lEmail").value.trim(), m = $("lMsg");
+    if (!email) { m.textContent = "Önce e-posta adresini yaz."; m.className = "msg bad"; return; }
+    try { await authPost("sendOobCode", { requestType: "PASSWORD_RESET", email }, { "X-Firebase-Locale": "tr" }); m.textContent = "Şifre sıfırlama bağlantısı gönderildi."; m.className = "msg ok"; }
+    catch (err) { m.textContent = ERR[err.code] || err.code; m.className = "msg bad"; }
+  });
+  const signOut = () => { saveS(null); ROLE = ""; USERS = []; view("vLogin"); };
+  $("outBtn").addEventListener("click", signOut); $("outBtn2").addEventListener("click", signOut);
+  $("copyUid").addEventListener("click", async () => { try { await navigator.clipboard.writeText(S.uid); $("copyUid").textContent = "✓ Kopyalandı"; } catch (e) { $("copyUid").textContent = "Uzun basıp kopyala"; } });
+  $("refreshBtn").addEventListener("click", loadAll);
+  $("uSearch").addEventListener("input", renderUsers);
+  $("uFilters").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; uFilter = b.dataset.f; document.querySelectorAll("#uFilters .chip").forEach(x => x.classList.toggle("on", x === b)); renderUsers(); });
+  $("tabs").addEventListener("click", e => {
+    const b = e.target.closest("[data-t]"); if (!b) return;
+    document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+    ["tGen", "tUsers", "tMore", "tMe"].forEach(t => $(t).classList.toggle("hidden", t !== b.dataset.t));
+    window.scrollTo(0, 0);
+  });
+  boot();
+})();
+</script>
+</body>
+</html>
