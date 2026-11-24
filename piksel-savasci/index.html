@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Piksel Savaşçı — Parça 12: Kol ve zincir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1d1a2b;
+    --ink: #f6ead2;
+    --stick: rgba(29, 26, 43, 0.45);
+    --stick-edge: rgba(246, 234, 210, 0.6);
+    --accent: #ffcf4a;
+    --cw: 400px; --ch: 224px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #1d1a2b; }
+  }
+  :root[data-theme="dark"] { --bg: #1d1a2b; }
+  html, body {
+    height: 100%; margin: 0; background: var(--bg); color: var(--ink);
+    overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    font-family: "Fredoka", "Trebuchet MS", sans-serif;
+  }
+  /* #wrap her zaman yatay: telefon dik tutulursa 90° döndürülür */
+  #wrap { position: absolute; top: 0; left: 0; transform-origin: top left; overflow: hidden; }
+  #game { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #game canvas {
+    width: var(--cw) !important; height: var(--ch) !important; margin: 0 !important;
+  }
+  #hud { position: absolute; top: 10px; left: 16px; pointer-events: none; text-shadow: 2px 2px 0 #000; line-height: 1.1; }
+  #hud .world { font-size: 18px; font-weight: 700; color: var(--accent); }
+  #hud .area { font-size: 14px; }
+  #hud .bars { margin-top: 6px; display: grid; grid-template-columns: auto 120px; gap: 3px 6px; align-items: center; font-size: 12px; }
+  .bar { height: 9px; background: rgba(20, 16, 30, 0.75); border: 2px solid #1a1020; border-radius: 3px; overflow: hidden; }
+  .bar { position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; height: 100%; width: 100%; }
+  #hpChip { background: #ffd0c8; }
+  #hpFill { background: #e8343a; }
+  #shFill { background: #5ab0e8; }
+  #shFill.broken { background: #8d8a96; }
+  #enFill { background: #7ad84a; }
+  #enFill.low { background: #c8d0b8; }
+  #poFill { background: #ff9a3a; }
+  #poFill.exposed { background: #ff3a3a; animation: blink 0.25s steps(2) infinite; width: 100% !important; }
+  @keyframes blink { 50% { background: #ffffff; } }
+  @media (prefers-reduced-motion: reduce) { #poFill.exposed { animation: none; } }
+
+  .act {
+    position: absolute; border-radius: 50%; padding: 0; touch-action: none;
+    background: var(--stick); border: 3px solid var(--stick-edge); color: var(--ink);
+    font: 700 15px "Fredoka", "Trebuchet MS", sans-serif;
+  }
+  .act.on { background: rgba(246, 234, 210, 0.38); transform: scale(0.94); }
+  .act:focus-visible { outline: 3px solid var(--accent); }
+  #btnAtk { right: 24px; bottom: 22px; width: 88px; height: 88px; font-size: 17px; }
+  #btnGuard { right: 124px; bottom: 16px; width: 70px; height: 70px; }
+  #btnDash { right: 34px; bottom: 122px; width: 66px; height: 66px; }
+  #hud .gold { margin-top: 4px; font-size: 17px; font-weight: 700; color: var(--accent); }
+  #tapZone { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; touch-action: none; }
+
+  /* Market penceresi */
+  #shop {
+    position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    background: rgba(12, 9, 22, 0.62); opacity: 0; pointer-events: none; transition: opacity 0.18s;
+  }
+  #shop.open { opacity: 1; pointer-events: auto; }
+  #shopPanel {
+    width: min(94%, 640px); max-height: 94%; box-sizing: border-box; padding: 10px 12px 12px;
+    background: #2c2646; border: 4px solid #1a1020; border-radius: 10px;
+    box-shadow: 0 0 0 3px #e6c486, 0 10px 0 3px rgba(0, 0, 0, 0.35);
+    transform: translateY(40px) scale(0.8); transition: transform 0.3s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+  #shop.open #shopPanel { transform: none; }
+  .shopHead { display: flex; align-items: center; gap: 12px; }
+  .shopHead h2 { margin: 0; font-size: 22px; color: var(--accent); flex: 1; }
+  .shopHead .gold { font-size: 16px; color: var(--accent); }
+  #shop button { font: 700 14px "Fredoka", "Trebuchet MS", sans-serif; border: 3px solid #1a1020; border-radius: 7px; padding: 5px 10px; color: #1a1020; background: #e6c486; }
+  #shop button:focus-visible { outline: 3px solid #fff; }
+  #shopClose { background: #ff8a7a; }
+  #shopTabs { display: flex; gap: 6px; margin: 8px 0; }
+  #shopTabs button { flex: 1; background: #453c66; color: var(--ink); font-size: 12px; padding: 5px 2px; }
+  .item { padding: 5px !important; gap: 2px !important; }
+  .item .name { font-size: 13px !important; }
+  #shopTabs button.on { background: var(--accent); color: #1a1020; }
+  #shopGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .item { background: #3a3258; border: 3px solid #1a1020; border-radius: 8px; padding: 7px; text-align: center; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .item.equipped { border-color: #7fd4ff; }
+  .item img { width: 76px; height: 30px; object-fit: contain; image-rendering: pixelated; }
+  .item .name { font-size: 15px; font-weight: 700; }
+  .item .stat { font-size: 12px; opacity: 0.85; min-height: 14px; }
+  .item .price { font-size: 13px; color: var(--accent); }
+  .item button.owned { background: #9fe08a; }
+  .item button.worn { background: #7fd4ff; }
+  .item button.poor { background: #8d8a96; }
+  #btnAvatar {
+    position: absolute; top: 10px; right: 16px; font: 700 14px "Fredoka", "Trebuchet MS", sans-serif; touch-action: none;
+    color: var(--ink); background: var(--stick); border: 3px solid var(--stick-edge); border-radius: 10px; padding: 6px 12px;
+  }
+  #btnAvatar:focus-visible { outline: 3px solid var(--accent); }
+  #avatars {
+    position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    background: rgba(12, 9, 22, 0.62); opacity: 0; pointer-events: none; transition: opacity 0.18s;
+  }
+  #avatars.open { opacity: 1; pointer-events: auto; }
+  #avatarPanel {
+    width: min(94%, 640px); max-height: 94%; box-sizing: border-box; padding: 10px 12px 12px;
+    background: #2c2646; border: 4px solid #1a1020; border-radius: 10px; box-shadow: 0 0 0 3px #e6c486, 0 10px 0 3px rgba(0, 0, 0, 0.35);
+    transform: translateY(40px) scale(0.8); transition: transform 0.3s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+  #avatars.open #avatarPanel { transform: none; }
+  #avatarClose { font: 700 14px "Fredoka", "Trebuchet MS", sans-serif; border: 3px solid #1a1020; border-radius: 7px; padding: 5px 10px; color: #1a1020; background: #ff8a7a; }
+  #avatarGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+  .avatar { background: #3a3258; border: 3px solid #1a1020; border-radius: 8px; padding: 6px 2px; text-align: center; color: var(--ink); font: 700 12px "Fredoka", "Trebuchet MS", sans-serif; }
+  .avatar.on { border-color: var(--accent); background: #4a4070; }
+  .avatar img { display: block; width: 100%; max-width: 64px; margin: 0 auto 4px; image-rendering: pixelated; }
+  .avatar:focus-visible { outline: 3px solid #fff; }
+  /* Ahşap tuş teması: kalın koyu çerçeve, üstte açık altta koyu kenar, krem yazı */
+  .act, #btnAvatar, #shop button, #avatarClose, .avatar {
+    background: #8f5e36; border: 3px solid #3a2414; color: #f8e2a8; letter-spacing: 0.5px; font-weight: 700;
+    box-shadow: inset 0 3px 0 #b88450, inset 0 -5px 0 #6c4426, 0 3px 0 rgba(20, 12, 6, 0.4);
+    text-shadow: -1px -1px 0 #3a2414, 1px -1px 0 #3a2414, -1px 1px 0 #3a2414, 1px 1px 0 #3a2414, 0 3px 0 #3a2414;
+  }
+  .act { opacity: 0.92; }
+  .act.on, #shop button:active, #btnAvatar:active, #avatarClose:active, .avatar:active {
+    background: #7c5030; transform: translateY(2px) scale(0.97); box-shadow: inset 0 2px 0 #9a6c40, inset 0 -2px 0 #6c4426;
+  }
+  #shopClose, #avatarClose { background: #a8483a; box-shadow: inset 0 3px 0 #cc6a58, inset 0 -5px 0 #7c3026, 0 3px 0 rgba(20, 12, 6, 0.4); }
+  #shopTabs button { background: #6c4426; box-shadow: inset 0 3px 0 #8a5c38, inset 0 -4px 0 #523018; color: #e8cc90; }
+  #shopTabs button.on { background: #c08a48; box-shadow: inset 0 3px 0 #e0b070, inset 0 -5px 0 #94622e; color: #fff4d0; }
+  .item button.owned { background: #6a9444; box-shadow: inset 0 3px 0 #8cb860, inset 0 -5px 0 #4a6e2c; }
+  .item button.worn { background: #4a82a4; box-shadow: inset 0 3px 0 #70a8c8, inset 0 -5px 0 #325e7c; }
+  .item button.poor { background: #7a726a; box-shadow: inset 0 3px 0 #9a928a, inset 0 -5px 0 #5a524a; color: #d8d0c4; }
+  .avatar.on { background: #c08a48; box-shadow: inset 0 3px 0 #e0b070, inset 0 -5px 0 #94622e, 0 0 0 3px #ffcf4a; }
+  #shopPanel, #avatarPanel { background: #5a3a24; box-shadow: 0 0 0 3px #c08a48, 0 10px 0 3px rgba(0, 0, 0, 0.35); }
+  .item { background: #6c4628; }
+  #shopMsg { min-height: 18px; margin-top: 6px; font-size: 13px; text-align: center; color: #ffb0a0; }
+
+  #stickZone { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; touch-action: none; }
+  #stick {
+    position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+    background: var(--stick); border: 3px solid var(--stick-edge); pointer-events: none;
+    left: 0; top: 0; opacity: 0; transition: opacity 0.35s ease-out;
+  }
+  #stick.active { opacity: 1; transition: none; }
+  #knob {
+    position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    border-radius: 50%; background: var(--ink); opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="game"></div>
+  <div id="hud">
+    <div class="world">Dünya 1</div>
+    <div class="area">Yeşil Vadi</div>
+    <div class="gold">Altın <b id="goldTxt">0</b></div>
+  </div>
+  <div id="tapZone"></div>
+  <div id="stickZone" aria-label="Hareket kolu"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <button id="btnGuard" class="act" data-act="guard" aria-label="Savun (basılı tut)">SİPER</button>
+  <button id="btnDash" class="act" data-act="dash" aria-label="İleri atıl">ATIL</button>
+  <button id="btnAtk" class="act" data-act="atk" aria-label="Saldır">VUR</button>
+
+  <button id="btnAvatar">Karakter</button>
+  <div id="avatars" role="dialog" aria-label="Karakter seç">
+    <div id="avatarPanel">
+      <div class="shopHead"><h2>Karakterini seç</h2><button id="avatarClose">Kapat</button></div>
+      <div id="avatarGrid"></div>
+    </div>
+  </div>
+  <div id="shop" role="dialog" aria-label="Silah Tüccarı">
+    <div id="shopPanel">
+      <div class="shopHead">
+        <h2>Silah Tüccarı</h2>
+        <span class="gold">Altın <b id="shopGold">0</b></span>
+        <button id="shopClose">Kapat</button>
+      </div>
+      <div id="shopTabs"></div>
+      <div id="shopGrid"></div>
+      <div id="shopMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script>
+/* =========================================================
+   PİKSEL SAVAŞÇI — Parça 2: Yumruk ve siper
+   Bölümler (ileride ayrı dosyalara ayrılacak):
+   CONFIG · PALETTE · Screen · SaveService · Art · WorldGen · Controls · WorldScene
+
+   RENK KURALI
+   - Zemin ve süsler : soluk, düşük doygunluk (yeşil / toprak)
+   - Oyuncu          : koyu dış çizgi + parlak sıcak renk (kırmızı / krem)
+   - Düşmanlar       : koyu dış çizgi + mor / pembe ailesi (Parça 3)
+   - Ödüller         : parlak sarı
+   ========================================================= */
+
+const CONFIG = { height: 152, minWidth: 270, maxWidth: 360, tile: 16, speed: 82, cols: 64, rows: 44 };
+
+/* Dövüş ayarları — ileride ekipman verisi buradan/sunucudan gelecek */
+const COMBAT = {
+  hpMax: 100, hpRegen: 2,
+  // Enerji: ileri atılma harcar, zamanla dolar
+  energy: { max: 100, dashCost: 34, regen: 20, regenDelay: 500 },
+  dash: { time: 150, speed: 300 },
+  // Denge: hasar aldıkça azalır. Bitince 3 sn "savunmasız" olursun; o sırada yediğin vuruş 2 kat hasar verir
+  poise: { max: 100, perDamage: 2.3, regen: 9, regenDelay: 4000, exposedTime: 3000, critMult: 2 },
+  // Savunma türü eldeki ekipmana göre seçilir: kalkan > kılıç > çıplak el
+  guards: {
+    hands:  { name: 'El siperi',       max: 40,  regen: 14 },
+    sword:  { name: 'Kılıç savunması', max: 70,  regen: 16 },
+    shield: { name: 'Kalkan',          max: 120, regen: 18 }
+  },
+  guardRegenDelay: 900, guardMoveFactor: 0.45,
+  dummy: { dmg: 15, range: 30, windup: 480, cooldown: 1700 }
+};
+/* Eşya verisi — ileride sunucudan gelecek, denge ayarı buradan yapılır */
+const ITEMS = {
+  // Silahlar: 12 tür, hepsi 1. seviye (başlangıç) görünüşünde. XP sistemi gelince seviye atlayıp görünüş değiştirecekler.
+  sword_basic:   { type: 'sword',   tab: 'blade', name: 'Kılıç',             dmg: [6, 9],   guard: 35, price: 0 },
+  axe_war:       { type: 'axe',     tab: 'blade', name: 'El Baltası',        dmg: [5, 8],   guard: 26, price: 0 },
+  mace_iron:     { type: 'mace',    tab: 'blade', name: 'Topuz',             dmg: [10, 13], guard: 30, price: 0 },
+  claw_steel:    { type: 'claw',    tab: 'blade', name: 'Pençe',             dmg: [4, 6],   guard: 22, price: 0 },
+  flail_spike:   { type: 'flail',   tab: 'range', name: 'Zincirli Gürz',     dmg: [8, 12],  guard: 20, price: 0 },
+  poleaxe_long:  { type: 'poleaxe', tab: 'pole',  name: 'Uzun Balta',        dmg: [13, 18], guard: 35, price: 0 },
+  spear_wood:    { type: 'spear',   tab: 'pole',  name: 'Mızrak',            dmg: [8, 11],  guard: 30, price: 0 },
+  trident_sea:   { type: 'trident', tab: 'pole',  name: 'Yaba',              dmg: [9, 13],  guard: 32, price: 0 },
+  glaive_moon:   { type: 'glaive',  tab: 'pole',  name: 'Kargı',             dmg: [11, 15], guard: 35, price: 0 },
+  twin_crescent: { type: 'twin',    tab: 'pole',  name: 'Çift Ağızlı Teber', dmg: [9, 13],  guard: 40, price: 0 },
+  bow_hunter:    { type: 'bow',     tab: 'range', name: 'Yay',               dmg: [6, 10],  guard: 12, price: 0 },
+  whip_chain:    { type: 'whip',    tab: 'range', name: 'Zincirli Hançer',   dmg: [6, 9],   guard: 18, price: 0 },
+  shield_wood:   { type: 'shield', tab: 'shield', name: 'Tahta Kalkan',   guard: 55, price: 90,  col: ['#b07a44', '#d8a868', '#8a5a2c'] },
+  shield_iron:   { type: 'shield', tab: 'shield', name: 'Demir Kalkan',   guard: 80, price: 260, col: ['#aab8cc', '#e0e8f4', '#7888a0'] },
+  shield_gold:   { type: 'shield', tab: 'shield', name: 'Altın Kalkan',   guard: 115, price: 600, col: ['#ffcf4a', '#fff0a0', '#d89a2a'] },
+  armor_leather: { type: 'armor',  tab: 'armor', name: 'Demir Zırh',     def: 2, price: 80,  col: ['#787c8a', '#a0a4b2', '#50546a'] },
+  armor_chain:   { type: 'armor',  tab: 'armor', name: 'Çelik Zırh',     def: 5, price: 240, col: ['#a2aab8', '#d2d8e2', '#6a7284'] },
+  armor_plate:   { type: 'armor',  tab: 'armor', name: 'Şövalye Zırhı',  def: 9, price: 560, col: ['#c6cedc', '#f6faff', '#8892a8'], trim: '#ffcf4a' }
+};
+// Silah sınıfı: süre (ms), bekleme, menzil, vuruş açısı (1 = dar, -1.1 = her yön), animasyon, kabza konumu (doku pikseli)
+const WEAPON_CLASS = {
+  sword:   { anim: 'slash',  time: 210, cooldown: 380, reach: 27, arc: 0.27, slash: 0.78, grip: 7 },
+  axe:     { anim: 'chop',   time: 220, cooldown: 380, reach: 22, arc: 0.3,  slash: 0.62, grip: 6, hitAt: 0.6 },
+  mace:    { anim: 'smash',  time: 300, cooldown: 520, reach: 24, arc: 0.3,  slash: 0.7,  grip: 6, hitAt: 0.65 },
+  claw:    { anim: 'claw',   time: 220, cooldown: 270, reach: 18, arc: 0.2,  grip: 3, hits: 2 },
+  flail:   { anim: 'flail',  time: 560, cooldown: 760, reach: 31, arc: -1.1, grip: 5, hits: 2 },
+  poleaxe: { anim: 'sweep',  time: 340, cooldown: 600, reach: 36, arc: 0,    slash: 1.05, grip: 16 },
+  spear:   { anim: 'thrust', time: 230, cooldown: 400, reach: 40, arc: 0.8,  grip: 18, hitAt: 0.45 },
+  trident: { anim: 'thrust', time: 250, cooldown: 430, reach: 38, arc: 0.7,  grip: 18, hitAt: 0.45 },
+  glaive:  { anim: 'sweep',  time: 300, cooldown: 540, reach: 36, arc: 0.1,  slash: 1.05, grip: 16 },
+  twin:    { anim: 'spin',   time: 400, cooldown: 660, reach: 32, arc: -1.1, grip: 36, hits: 2 },
+  bow:     { anim: 'shoot',  time: 320, cooldown: 520, reach: 150, arc: 2,   grip: 12, vertical: true, scale: 0.27 },
+  whip:    { anim: 'whip',   time: 320, cooldown: 500, reach: 52, arc: 0.85, grip: 5, hitAt: 0.5 }
+};
+const PlayerData = { gold: 150, owned: ['sword_basic'], equipped: { weapon: 'sword_basic', shield: null, armor: null }, avatar: 'farmer', element: null,
+  weaponLevel: {} }; // silah kimliği -> seviye (1-8). XP sistemi bu değeri artıracak.
+const WEAPON_MAX_LEVEL = 8;
+const weaponLevel = id => Math.max(1, Math.min(WEAPON_MAX_LEVEL, PlayerData.weaponLevel[id] || 1));
+// Seviye başına hasar artışı (şimdilik herkes 1. seviye)
+const weaponDmg = () => { const it = weaponItem(), k = 1 + 0.2 * (weaponLevel(PlayerData.equipped.weapon) - 1); return [Math.round(it.dmg[0] * k), Math.round(it.dmg[1] * k)]; };
+// Zırhın göğsündeki taşın elementi (ileride eklenecek): taş ve ışık çizgileri bu renge bürünür
+const ELEMENTS = { fire: '#e8343a', water: '#3a9cf0', nature: '#3cc444', shadow: '#a050e8', lightning: '#f2d422', ember: '#f28422' };
+// Seçilebilir köylü avatarları
+const AVATARS = [
+  { id: 'farmer',  name: 'Çiftçi',  style: 'messy', hair: '#5a3a26', tunic: '#ece0c4', vest: '#6a4428', pants: '#3a3438' },
+  { id: 'cook',    name: 'Aşçı',    style: 'bun',   hair: '#a84e2a', tunic: '#f0e6d0', female: { dress: '#7a4a30', apron: '#f0e2c4' } },
+  { id: 'lumber',  name: 'Oduncu',  style: 'messy', hair: '#2a2228', tunic: '#4e7a52', pants: '#4a3a2c', beard: true },
+  { id: 'shepherd',name: 'Çoban',   style: 'curly', hair: '#d8a848', tunic: '#44609a', pants: '#4a4048' },
+  { id: 'healer',  name: 'Şifacı',  style: 'long',  hair: '#6a4028', tunic: '#f0e6d0', female: { dress: '#5e8a66', apron: '#f0e2c4' } },
+  { id: 'smith',   name: 'Demirci', style: 'short', hair: '#7a4e2c', tunic: '#c8a87c', pants: '#6a4a2c', mustache: true },
+  { id: 'hunter',  name: 'Avcı',    style: 'messy', hair: '#2a2228', tunic: '#8a3a3c', pants: '#2e2c34' }
+];
+const weaponItem = () => ITEMS[PlayerData.equipped.weapon] || ITEMS.sword_basic;
+const guardInfo = () => {
+  const sh = ITEMS[PlayerData.equipped.shield];
+  return sh ? { kind: 'shield', max: sh.guard, regen: 18 } : { kind: weaponItem().type, max: weaponItem().guard, regen: 16 };
+};
+
+const PALETTE = {
+  grass: '#7fa858', grassDark: '#6a9248', grassLight: '#98be68',
+  path: '#c2a47c', pathDark: '#a88a64', pathLight: '#d6ba92',
+  water: '#4f7fb4', waterLight: '#84acd4', waterDark: '#3d6798',
+  cobble: '#a8a4b0', cobbleDark: '#8a8694', cobbleLight: '#c4c0cc',
+  wall: '#7c7684', wallTop: '#a09aa8', wallDark: '#5a5462',
+  soil: '#8a6040', soilDark: '#6e4a30',
+  leaf: '#3f7a3c', leafMid: '#5a9a48', leafLight: '#9cc85c', leafDark: '#2c5630', trunk: '#6b4a32',
+  outline: '#1a1020'
+};
+
+/* ---------- Ekran: her zaman yatay ---------- */
+const Screen = {
+  rotated: false, lw: 0, lh: 0, gameW: CONFIG.minWidth, zoom: 3,
+  measure() {
+    const W = window.innerWidth, H = window.innerHeight;
+    this.rotated = H > W;
+    this.lw = this.rotated ? H : W;
+    this.lh = this.rotated ? W : H;
+  },
+  init() {
+    this.measure();
+    const w = Math.round((CONFIG.height * this.lw / this.lh) / 2) * 2;
+    this.gameW = Math.max(CONFIG.minWidth, Math.min(CONFIG.maxWidth, w));
+    // Oyun, piksel başına 'zoom' kat çözünürlükte çizilir: kaydırma ince adımlarla olur, titreme olmaz
+    this.zoom = this.lh * (window.devicePixelRatio || 1) >= 560 ? 6 : 3; // 3'ün katı: karakter (3x) ve dünya (2x) pikselleri tam oturur
+    this.layout();
+    window.addEventListener('resize', () => this.layout());
+    window.addEventListener('orientationchange', () => setTimeout(() => this.layout(), 200));
+  },
+  layout() {
+    this.measure();
+    const wrap = document.getElementById('wrap');
+    wrap.style.width = this.lw + 'px';
+    wrap.style.height = this.lh + 'px';
+    wrap.style.left = this.rotated ? window.innerWidth + 'px' : '0px';
+    wrap.style.transform = this.rotated ? 'rotate(90deg)' : 'none';
+    const s = Math.min(this.lw / this.gameW, this.lh / CONFIG.height);
+    document.documentElement.style.setProperty('--cw', Math.floor(this.gameW * s) + 'px');
+    document.documentElement.style.setProperty('--ch', Math.floor(CONFIG.height * s) + 'px');
+    this.cw = Math.floor(this.gameW * s); this.ch = Math.floor(CONFIG.height * s);
+  },
+  // Ekran koordinatını oyunun (yatay) koordinatına çevirir
+  toLocal(e) {
+    return this.rotated ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY };
+  }
+};
+
+/* ---------- Kayıt katmanı (şimdi cihaz, Parça 8'de Firebase) ---------- */
+const SaveService = {
+  key: 'piksel-savasci-save-v3',
+  load() { try { const raw = localStorage.getItem(this.key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } },
+  save(data) { try { localStorage.setItem(this.key, JSON.stringify(data)); } catch (e) {} }
+};
+
+/* ---------- Arayüz çubukları ---------- */
+const Hud = {
+  gold: -1,
+  update() {
+    if (PlayerData.gold !== this.gold) { this.gold = PlayerData.gold; document.getElementById('goldTxt').textContent = this.gold; }
+  }
+};
+
+/* ---------- Kodla piksel grafik ---------- */
+const Art = {
+  rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); },
+  // Tüm grafikler 2 kat yoğunlukta üretilir ve oyunda yarı ölçekte gösterilir (karakter ~32 piksel).
+  // 'lo' anahtarları (efektler) eski yoğunlukta kalır.
+  hi: new Set(), lo: new Set(['slash', 'ring', 'spark', 'dust', 'dot', 'glow', 'portalGlow', 'shadow', 'guardArc1', 'guardArc2', 'guardArc3', 'guardArc4', 'guardArc5']),
+  canvas(scene, key, w, h) {
+    if (this.lo.has(key)) { const tex = scene.textures.createCanvas(key, w, h); return { tex, ctx: tex.getContext() }; }
+    // Eski çizim kodları: 2 kat büyütülür, üstüne ince doku eklenir
+    const tex = scene.textures.createCanvas(key, w * 2, h * 2), ctx = tex.getContext();
+    ctx.scale(2, 2); this.hi.add(key);
+    const refresh = tex.refresh.bind(tex); let done = false;
+    tex.refresh = () => { if (!done) { done = true; this.texturize(ctx, w * 2, h * 2); } return refresh(); };
+    const add = tex.add.bind(tex);
+    tex.add = (name, src, x, y, fw, fh) => add(name, src, x * 2, y * 2, fw * 2, fh * 2);
+    return { tex, ctx };
+  },
+  // Doğrudan yüksek yoğunlukta çizilen dokular (w, h gerçek piksel)
+  canvasHi(scene, key, w, h) { const tex = scene.textures.createCanvas(key, w, h); this.hi.add(key); return { tex, ctx: tex.getContext() }; },
+  texturize(ctx, W, H) {
+    let id; try { id = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
+    const d = id.data, sh = (i, v) => { d[i] = Math.max(0, Math.min(255, d[i] + v)); d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + v)); d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + v)); };
+    for (let by = 0; by < H; by += 2) for (let bx = 0; bx < W; bx += 2) {
+      const i = (by * W + bx) * 4;
+      if (d[i + 3] < 250 || d[i] + d[i + 1] + d[i + 2] < 150) continue;
+      const hsh = ((bx * 73856093) ^ (by * 19349663)) >>> 0;
+      if (hsh % 5 === 0) sh(i, 13);
+      if (hsh % 7 === 0) sh(i + (W + 1) * 4, -15);
+      if (hsh % 11 === 0) sh(i + 4, 8);
+    }
+    ctx.putImageData(id, 0, 0);
+  },
+  ell(ctx, cx, cy, rx, ry, c) {
+    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y++) {
+      const hw = rx * Math.sqrt(Math.max(0, 1 - ((y - cy) * (y - cy)) / (ry * ry))), a = Math.round(cx - hw), b = Math.round(cx + hw);
+      if (b > a) this.px(ctx, a, y, c, b - a, 1);
+    }
+  },
+  poly(ctx, pts, c) {
+    const ys = pts.map(q => q[1]), yMin = Math.floor(Math.min(...ys)), yMax = Math.ceil(Math.max(...ys));
+    for (let y = yMin; y < yMax; y++) {
+      const yc = y + 0.5, xs = [];
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+        if ((y1 <= yc && y2 > yc) || (y2 <= yc && y1 > yc)) xs.push(x1 + (yc - y1) / (y2 - y1) * (x2 - x1));
+      }
+      xs.sort((a, b) => a - b);
+      for (let i = 0; i + 1 < xs.length; i += 2) { const a = Math.round(xs[i]), b = Math.round(xs[i + 1]); if (b > a) this.px(ctx, a, y, c, b - a, 1); }
+    }
+  },
+  // Yüksek yoğunlukta nesne çizer: şekiller -> otomatik hacim -> dış çizgi
+  hiDraw(scene, key, w, h, fn, o = {}) {
+    const { tex, ctx } = this.canvasHi(scene, key, w, h);
+    const d = { ctx, R: (x, y, ww, hh, c) => this.px(ctx, Math.round(x), Math.round(y), c, Math.round(ww), Math.round(hh)),
+      E: (cx, cy, rx, ry, c) => this.ell(ctx, cx, cy, rx, ry, c), G: (pts, c) => this.poly(ctx, pts, c) };
+    fn(d);
+    if (o.bevel !== false) this.bevel(ctx, w, h);
+    if (o.after) o.after(d);
+    this.outline(ctx, w, h, o.line || '#2a1a1c');
+    tex.refresh();
+    return tex;
+  },
+  // Saydam piksellerin opak komşusu varsa dış çizgi çizer
+  outline(ctx, W, H, color) {
+    let id; try { id = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
+    const d = id.data, a = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 100, pts = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)
+      if (!a(x, y) && (a(x - 1, y) || a(x + 1, y) || a(x, y - 1) || a(x, y + 1))) pts.push(x, y);
+    for (let i = 0; i < pts.length; i += 2) this.px(ctx, pts[i], pts[i + 1], color);
+  },
+  px(ctx, x, y, c, w = 1, h = 1) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); },
+  blob(ctx, cx, cy, rad, c) {
+    for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++)
+      if (x * x + y * y <= rad * rad) this.px(ctx, cx + x, cy + y, c);
+  },
+  drawMap(ctx, rows, pal, ox, oy) {
+    rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const c = pal[row[x]]; if (c) this.px(ctx, ox + x, oy + y, c); } });
+  },
+  build(scene) { this.tiles(scene); this.tilesHi(scene); this.hero(scene); this.nature(scene); this.decor(scene); this.house(scene); this.combat(scene); this.items(scene); this.market(scene); this.props(scene); this.furniture(scene); this.weapons(scene); },
+
+  combat(scene) {
+    const k = PALETTE.outline;
+    // Kılıç (sağa bakar, kabzadan tutulur)
+    let { tex, ctx } = this.canvas(scene, 'sword', 18, 7);
+    this.px(ctx, 0, 2, k, 4, 3); this.px(ctx, 1, 3, '#a06a34', 3, 1);
+    this.px(ctx, 4, 0, k, 3, 7); this.px(ctx, 5, 1, '#ffcf4a', 1, 5);
+    this.px(ctx, 7, 1, k, 11, 5); this.px(ctx, 7, 2, '#dfeeff', 9, 3);
+    this.px(ctx, 7, 2, '#ffffff', 9, 1); this.px(ctx, 7, 4, '#9fb8d8', 9, 1); this.px(ctx, 16, 3, '#dfeeff');
+    tex.refresh();
+    // Kılıç savurma izi (sağa bakan kalın yay)
+    ({ tex, ctx } = this.canvas(scene, 'slash', 24, 48));
+    for (let a = -72; a <= 72; a += 1) {
+      const rad = a * Math.PI / 180, thick = 1 + Math.round(4 * Math.cos(rad * 1.2));
+      for (let rr = 21 - thick; rr <= 21; rr++)
+        this.px(ctx, Math.round(rr * Math.cos(rad)), 24 + Math.round(rr * Math.sin(rad)), rr >= 20 ? '#ffffff' : '#bfeaff');
+    }
+    tex.refresh();
+    // Savunma yayı
+    // 5 kademe: siper sağlığı azaldıkça yay kısalır (guardArc5 = tam, guardArc1 = bitmek üzere)
+    for (let lv = 1; lv <= 5; lv++) {
+      ({ tex, ctx } = this.canvas(scene, 'guardArc' + lv, 18, 34));
+      const half = Math.round(58 * lv / 5);
+      for (let a = -half; a <= half; a += 1) {
+        const rad = a * Math.PI / 180;
+        for (let rr = 13; rr <= 15; rr++)
+          this.px(ctx, Math.round(rr * Math.cos(rad)), 17 + Math.round(rr * Math.sin(rad)), rr === 15 ? '#ffffff' : '#7fd4ff');
+      }
+      tex.refresh();
+    }
+    // Halka, kıvılcım, parçacık
+    ({ tex, ctx } = this.canvas(scene, 'ring', 24, 24));
+    for (let a = 0; a < 360; a += 2) {
+      const rad = a * Math.PI / 180;
+      this.px(ctx, 12 + Math.round(10 * Math.cos(rad)), 12 + Math.round(10 * Math.sin(rad)), '#ffffff');
+    }
+    tex.refresh();
+    ({ tex, ctx } = this.canvas(scene, 'spark', 9, 9));
+    this.px(ctx, 4, 0, '#ffe98a', 1, 9); this.px(ctx, 0, 4, '#ffe98a', 9, 1);
+    this.px(ctx, 2, 2, '#ffffff', 5, 5); this.px(ctx, 3, 3, '#ffe98a', 3, 3);
+    tex.refresh();
+    ({ tex, ctx } = this.canvas(scene, 'dust', 4, 4));
+    this.px(ctx, 1, 0, '#f4ead8', 2, 4); this.px(ctx, 0, 1, '#f4ead8', 4, 2); this.px(ctx, 1, 2, '#d8c8ac', 2, 1);
+    tex.refresh();
+    ({ tex, ctx } = this.canvas(scene, 'dot', 2, 2));
+    this.px(ctx, 0, 0, '#ffffff', 2, 2); tex.refresh();
+    // Antrenman kuklası (düşman rengi: mor)
+    ({ tex, ctx } = this.canvas(scene, 'dummy', 16, 22));
+    this.px(ctx, 6, 15, k, 4, 7); this.px(ctx, 7, 15, '#7a5a3c', 2, 6);
+    this.px(ctx, 0, 7, k, 16, 3); this.px(ctx, 1, 8, '#6a3aa0', 14, 1);
+    this.px(ctx, 3, 0, k, 10, 16); this.px(ctx, 4, 1, '#9a4fd8', 8, 14);
+    this.px(ctx, 4, 1, '#bd80f4', 8, 2); this.px(ctx, 4, 12, '#6a3aa0', 8, 3);
+    this.px(ctx, 5, 5, '#ffd6f2', 2, 2); this.px(ctx, 9, 5, '#ffd6f2', 2, 2);
+    this.px(ctx, 6, 9, k, 4, 1);
+    tex.refresh();
+  },
+
+  tiles(scene) {
+    const T = CONFIG.tile, P = PALETTE, r = this.rng(42);
+    const { tex, ctx } = this.canvas(scene, 'tiles', T * 9, T);
+    const speck = (i, n, c, w = 1, h = 1) => { for (let k = 0; k < n; k++) this.px(ctx, i * T + Math.floor(r() * (T - w)), Math.floor(r() * (T - h)), c, w, h); };
+    // 0,1,2: çimen çeşitleri
+    for (let i = 0; i < 3; i++) this.px(ctx, i * T, 0, P.grass, T, T);
+    speck(0, 5, P.grassDark); speck(0, 3, P.grassLight);
+    speck(1, 6, P.grassLight, 1, 2); speck(1, 4, P.grassDark, 2, 1);
+    speck(2, 7, P.grassDark, 1, 2); speck(2, 2, P.grassLight, 2, 1);
+    // 3: toprak yol
+    this.px(ctx, 3 * T, 0, P.path, T, T); speck(3, 7, P.pathDark, 2, 1); speck(3, 3, '#f6dca0');
+    // 4: su
+    this.px(ctx, 4 * T, 0, P.water, T, T);
+    this.px(ctx, 4 * T + 2, 4, P.waterLight, 5, 1); this.px(ctx, 4 * T + 9, 10, P.waterLight, 4, 1);
+    this.px(ctx, 4 * T + 5, 13, P.waterDark, 3, 1);
+    // 5: taş meydan
+    this.px(ctx, 5 * T, 0, P.cobbleDark, T, T);
+    [[0, 0], [8, 0], [-4, 8], [4, 8], [12, 8]].forEach(([x, y]) => {
+      const x0 = Math.max(0, x), w = Math.min(T, x + 7) - x0;
+      this.px(ctx, 5 * T + x0, y + 1, P.cobble, w, 6); this.px(ctx, 5 * T + x0, y + 1, P.cobbleLight, w, 1);
+    });
+    // 6: kaya duvar
+    this.px(ctx, 6 * T, 0, P.wall, T, T); this.px(ctx, 6 * T, 0, P.wallTop, T, 6);
+    this.px(ctx, 6 * T, 6, P.wallDark, T, 1); speck(6, 5, P.wallDark, 2, 1); this.px(ctx, 6 * T, 15, P.wallDark, T, 1);
+    // 7: sürülmüş toprak
+    this.px(ctx, 7 * T, 0, P.soil, T, T);
+    for (let y = 2; y < T; y += 4) this.px(ctx, 7 * T, y, P.soilDark, T, 1);
+    // 8: su (üst kıyı gölgesi)
+    this.px(ctx, 8 * T, 0, P.water, T, T); this.px(ctx, 8 * T, 0, '#3f8a3a', T, 2); this.px(ctx, 8 * T, 2, P.waterDark, T, 2);
+    this.px(ctx, 8 * T + 3, 9, P.waterLight, 5, 1);
+    tex.refresh();
+  },
+
+  shade(hex, v) { return '#' + [1, 3, 5].map(i => Math.max(0, Math.min(255, parseInt(hex.slice(i, i + 2), 16) + v)).toString(16).padStart(2, '0')).join(''); },
+  // Avatar verisinden tam renk paleti üretir
+  palette(a, armor) {
+    const S = (c, v) => this.shade(c, v), pants = a.pants || '#4a3a2c';
+    return { skin: '#f2c8a0', skinS: '#d8a47c', blush: '#ee9a84', hair: a.hair, hairL: S(a.hair, 36), hairS: S(a.hair, -30),
+      tunic: a.tunic, tunicL: S(a.tunic, 24), tunicS: S(a.tunic, -36), pants, pantsS: S(pants, -26),
+      boot: '#5a3a24', bootL: '#7a5434', belt: '#5a3a22', beltL: '#7a5434',
+      vest: a.vest, vestS: a.vest && S(a.vest, -28), style: a.style, beard: a.beard, mustache: a.mustache,
+      female: a.female && { dress: a.female.dress, dressS: S(a.female.dress, -30), dressL: S(a.female.dress, 22), apron: a.female.apron, apronS: S(a.female.apron, -34) },
+      armor };
+  },
+  // İnsan karakter (48x64 piksel, yuvarlak hatlı): dir 0 = öne, 1 = arkaya, 2 = yana (sağa); step 0 = duruş, 1-2 = yürüyüş
+  human(ctx, ox, dir, step, P) {
+    const R = (x, y, w, h, c) => this.px(ctx, ox + Math.round(x), Math.round(y), c, Math.round(w), Math.round(h));
+    // elips (isteğe bağlı dikey kırpma) ve çokgen doldurma: kenarlar keskin, yumuşatma yok
+    const E = (cx, cy, rx, ry, c, y0 = -99, y1 = 99) => {
+      for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y++) {
+        if (y < y0 || y > y1) continue;
+        const hw = rx * Math.sqrt(Math.max(0, 1 - ((y - cy) * (y - cy)) / (ry * ry))), a = Math.round(cx - hw), b = Math.round(cx + hw);
+        if (b > a) this.px(ctx, ox + a, y, c, b - a, 1);
+      }
+    };
+    const G = (pts, c) => {
+      const ys = pts.map(q => q[1]), yMin = Math.floor(Math.min(...ys)), yMax = Math.ceil(Math.max(...ys));
+      for (let y = yMin; y < yMax; y++) {
+        const yc = y + 0.5, xs = [];
+        for (let i = 0; i < pts.length; i++) {
+          const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+          if ((y1 <= yc && y2 > yc) || (y2 <= yc && y1 > yc)) xs.push(x1 + (yc - y1) / (y2 - y1) * (x2 - x1));
+        }
+        xs.sort((a, b) => a - b);
+        for (let i = 0; i + 1 < xs.length; i += 2) { const a = Math.round(xs[i]), b = Math.round(xs[i + 1]); if (b > a) this.px(ctx, ox + a, y, c, b - a, 1); }
+      }
+    };
+    const mir = pts => pts.map(([x, y]) => [48 - x, y]);
+    const S = (c, v) => this.shade(c, v);
+    const sole = '#2a1c14', eye = '#241820', A = P.armor, F = A ? null : P.female, dark = '#30303c', darkS = '#22222c';
+    const pants = A ? dark : P.pants, pantsS = A ? darkS : P.pantsS, boot = A ? A.mS : P.boot, bootL = A ? A.m : P.bootL;
+    const slv = A ? '#383844' : S(P.tunic, -8), slvS = A ? darkS : P.tunicS, hand = A ? A.m : P.skin;
+    const body = A ? A.m : F ? F.dress : P.tunic, st = P.style, lip = '#b87860';
+
+    if (dir < 2) {
+      const l = step === 1 ? -4 : 0, r = step === 2 ? -4 : 0, sw = step === 1 ? 2 : step === 2 ? -2 : 0;
+      // bacaklar ya da etek
+      if (F) {
+        R(17, 59 + (step === 1 ? -2 : 0), 6, 3, P.boot); R(26, 59 + (step === 2 ? -2 : 0), 6, 3, P.boot);
+        G([[15, 44], [33, 44], [38, 60], [10, 60]], F.dress); G([[30, 44], [33, 44], [38, 60], [33, 60]], F.dressS);
+        [[14, 50, 9], [20, 52, 7], [34, 50, 9]].forEach(([x, y, h]) => R(x, y, 1, h, F.dressS));
+      } else [[17, l], [26, r]].forEach(([x, lf], i) => {
+        R(x, 49, 6, 7 + lf, pants); R(x + 4, 49, 2, 7 + lf, pantsS);
+        if (A) E(x + 3, 52 + lf, 3.6, 2.6, A.m);
+        G([[x - 1, 55 + lf], [x + 7, 55 + lf], [x + 7.5, 61 + lf], [x - 1.5 - (i ? 0 : 0), 61 + lf]], boot);
+        R(x - 1, 55 + lf, 8, 2, bootL); R(x - 1, 60 + lf, 8, 1, sole);
+      });
+      // kollar
+      [[11.5, sw], [36.5, -sw]].forEach(([x, a], i) => {
+        if (P.noArm && i === dir) return; // silah tutan kol ayrı parça olarak çizilir
+        E(x, 38 + a * 0.5, 3.3, 7.2, i ? slvS : slv);
+        if (A) { E(x, 43 + a, 3.4, 3.4, i ? A.mS : A.m); R(x - 3, 41 + a, 6, 1, A.mS); }
+        else if (F) E(x, 35 + a * 0.3, 4, 4.5, i ? P.tunicS : P.tunic);
+        else R(x - 3, 43 + a, 6, 1, P.tunicS);
+        E(x, 46.5 + a, 2.6, 2.6, i && !A ? P.skinS : hand);
+      });
+      // gövde
+      R(21, 28, 6, 5, P.skinS);
+      G([[15, 31], [33, 31], [34.5, 36], [32, 47], [16, 47], [13.5, 36]], body);
+      if (A) {
+        G([[17, 45], [31, 45], [32, 50], [16, 50]], A.mS); R(20, 46, 1, 4, dark); R(27, 46, 1, 4, dark); R(16, 44, 16, 2, '#2a2a34');
+        R(20, 29, 8, 3, A.mS); E(11, 33, 6.2, 4.6, A.mL); E(37, 33, 6.2, 4.6, A.m);
+        R(6, 35, 10, 1, A.mS); R(32, 35, 10, 1, A.mS);
+        if (A.trim) { R(16, 31, 16, 1, A.trim); R(7, 31, 8, 1, A.trim); R(33, 31, 8, 1, A.trim); R(16, 44, 16, 1, A.trim); }
+        if (dir === 0) {
+          const gl = A.glow || '#4a4a58';
+          [[-1, -1, 6], [1, -1, 6], [-1, 0, 7], [1, 0, 7], [-1, 1, 5], [1, 1, 5]].forEach(([dx, dy, n]) => { for (let i = 3; i < 3 + n; i++) R(24 + dx * i - (dx > 0 ? 1 : 0), 38 + dy * i * (dy ? 0.8 : 0), 1, 1, gl); });
+          E(24, 38, 3.6, 3.6, '#1c1c26'); E(24, 38, 2.6, 2.6, A.gem); R(22, 36, 2, 2, S(A.gem, 70)); R(22, 36, 1, 1, '#ffffff'); R(24, 39, 2, 1, S(A.gem, -50));
+        } else { R(23, 32, 2, 12, A.mS); R(17, 38, 14, 1, A.mS); }
+      } else if (F) {
+        R(16, 42, 16, 2, F.dressS);
+        if (dir === 0) {
+          G([[19, 31], [29, 31], [24, 37]], P.skin); R(22, 37, 4, 1, P.tunic);
+          G([[19, 43], [29, 43], [31, 58], [17, 58]], F.apron); R(17, 57, 14, 1, F.apronS); R(28, 44, 1, 13, F.apronS); R(20, 48, 4, 3, F.apronS); R(20, 48, 4, 1, F.apron);
+        } else { R(21, 42, 6, 2, F.apron); G([[22, 44], [26, 44], [27, 50], [21, 50]], F.apronS); }
+      } else {
+        R(16, 47, 16, 3, P.tunic); R(16, 49, 16, 1, P.tunicS);
+        [[19, 37, 6], [29, 38, 5], [24, 40, 3]].forEach(([x, y, h]) => R(x, y, 1, h, P.tunicS));
+        if (P.vest) {
+          if (dir === 0) { const v = [[15, 31], [21, 31], [22, 47], [16, 47], [13.5, 36]]; G(v, P.vest); G(mir(v), P.vestS); }
+          else { G([[15, 31], [33, 31], [34.5, 36], [32, 47], [16, 47], [13.5, 36]], P.vest); R(24, 32, 1, 14, P.vestS); }
+        }
+        if (dir === 0) { G([[21, 31], [27, 31], [24, 36]], P.skinS); R(23, 37, 2, 1, P.tunicS); R(23, 39, 2, 1, P.tunicS); R(22, 31, 1, 4, P.tunicL); R(26, 31, 1, 4, P.tunicL); }
+        R(16, 44, 16, 3, P.belt); R(16, 44, 16, 1, P.beltL);
+        if (dir === 0) { R(22, 44, 4, 3, '#e8c050'); R(23, 45, 2, 1, P.belt); }
+      }
+      // baş
+      if (dir === 0) {
+        E(13, 21, 2.2, 2.8, P.skinS); E(35, 21, 2.2, 2.8, P.skinS);
+        E(24, 19, 11, 11, P.skin);
+        R(18, 19, 3, 4, eye); R(27, 19, 3, 4, eye); R(18, 19, 1, 2, '#ffffff'); R(27, 19, 1, 2, '#ffffff'); R(20, 22, 1, 1, '#5a4048'); R(29, 22, 1, 1, '#5a4048');
+        R(17, 16, 5, 1, P.hairS); R(26, 16, 5, 1, P.hairS);
+        R(23, 23, 2, 1, P.skinS); R(24, 24, 1, 1, P.skinS); R(22, 26, 4, 1, lip);
+        E(16.5, 24.5, 2, 1.2, P.blush); E(31.5, 24.5, 2, 1.2, P.blush);
+        if (P.beard) { G([[13.5, 21], [16, 23], [20, 24], [28, 24], [32, 23], [34.5, 21], [34, 27], [29, 31], [19, 31], [14, 27]], P.hair); R(21, 26, 6, 1, lip); R(19, 24, 10, 1, P.hairS); }
+        if (P.mustache) { G([[19, 24], [29, 24], [31, 27], [27, 26], [21, 26], [17, 27]], P.hair); }
+        // saç (önden)
+        E(24, 14, 12.4, 9.2, P.hair, -99, 15); R(12, 15, 3, 5, P.hair); R(33, 15, 3, 5, P.hair); R(12, 20, 2, 2, P.hair); R(34, 20, 2, 1, P.hair);
+        if (st === 'messy') { [[[15, 15], [20, 15], [17, 20]], [[20, 15], [26, 15], [22, 19]], [[26, 15], [31, 15], [29, 20]], [[31, 15], [35, 15], [33, 18]]].forEach(t => G(t, P.hair)); }
+        else if (st === 'curly') [[17, 16, 2.6], [22, 17, 2.6], [27, 17, 2.6], [32, 16, 2.4]].forEach(([x, y, q]) => E(x, y, q, 2.2, P.hair));
+        else if (st === 'long') { G([[13, 15], [24, 15], [15, 21]], P.hair); G([[24, 15], [35, 15], [33, 21]], P.hair); }
+        else if (st === 'bun') G([[13, 15], [35, 15], [34, 18], [26, 16], [18, 17], [14, 20]], P.hair);
+        else G([[15, 15], [33, 15], [32, 17], [24, 18], [16, 17]], P.hair);
+        if (st === 'long') { G([[12, 14], [16, 14], [16, 33], [11, 36], [9.5, 24]], P.hair); G(mir([[12, 14], [16, 14], [16, 33], [11, 36], [9.5, 24]]), P.hairS); R(11, 20, 1, 12, P.hairL); }
+      } else {
+        E(24, 19, 11.4, 11.4, P.hair); E(24, 14, 12.4, 9.2, P.hair, -99, 16);
+        [[18, 10, 14], [22, 8, 17], [26, 8, 17], [30, 10, 14]].forEach(([x, y, h]) => R(x, y, 1, h, P.hairS));
+        R(20, 9, 1, 9, P.hairL); R(15, 13, 1, 8, P.hairL);
+        if (st === 'long') { G([[12.5, 18], [35.5, 18], [34, 39], [14, 39]], P.hair); [[18, 24, 14], [24, 22, 16], [30, 24, 14]].forEach(([x, y, h]) => R(x, y, 1, h, P.hairS)); R(15, 22, 1, 14, P.hairL); }
+        if (st === 'bun') { E(24, 13, 5.5, 5.5, P.hairS); E(23.5, 12.5, 4, 4, P.hair); }
+      }
+      // saç tepesi (önden ve arkadan ortak)
+      R(17, 8, 6, 1, P.hairL); R(19, 7, 3, 1, P.hairL); R(27, 9, 4, 1, P.hairL); R(31, 9, 1, 5, P.hairS);
+      if (st === 'messy') [[[17, 7], [20, 2], [23, 6]], [[22, 6], [26, 1], [29, 6]], [[28, 7], [33, 3], [33, 9]], [[13, 13], [9, 9], [15, 9]], [[12, 17], [8.5, 18], [12, 20]], [[35, 13], [39, 9], [33, 9]], [[36, 17], [39.5, 19], [36, 20]]].forEach(t => G(t, P.hair));
+      if (st === 'curly') { [[13, 11, 3], [16, 7, 3], [21, 5, 3.2], [27, 5, 3.2], [32, 7, 3], [35, 11, 3], [36, 16, 2.4], [12, 16, 2.4]].forEach(([x, y, q]) => E(x, y, q, q, P.hair)); [[15, 7], [21, 4], [28, 5], [33, 9], [12, 14]].forEach(([x, y]) => R(x, y, 2, 1, P.hairL)); }
+      if (st === 'bun' && dir === 0) { E(24, 4, 5.4, 4.2, P.hair); R(21, 2, 4, 1, P.hairL); R(27, 4, 1, 3, P.hairS); }
+    } else {
+      // yandan
+      if (F) {
+        R(20 + (step === 1 ? 4 : step === 2 ? -3 : 0), 59, 8, 3, P.boot);
+        G([[19, 44], [30, 44], [34, 60], [14, 60]], F.dress); G([[19, 44], [22, 44], [18, 60], [14, 60]], F.dressS); R(24, 50, 1, 9, F.dressS);
+      } else if (step === 0) {
+        R(21, 49, 7, 7, pants); R(21, 49, 2, 7, pantsS); if (A) E(25, 52, 3.6, 2.6, A.m);
+        G([[20, 55], [28, 55], [31, 58], [31, 61], [20, 61]], boot); R(20, 55, 8, 2, bootL); R(20, 60, 11, 1, sole);
+      } else if (step === 1) {
+        G([[19, 49], [25, 49], [20, 56], [14, 54]], pantsS); G([[12, 53], [19, 55], [18, 60], [10, 58]], boot); R(10, 58, 8, 1, sole);
+        G([[24, 49], [30, 49], [33, 56], [27, 57]], pants); if (A) E(28, 52, 3.4, 2.6, A.m);
+        G([[27, 56], [34, 55], [38, 59], [38, 61], [27, 61]], boot); R(27, 56, 7, 2, bootL); R(27, 60, 11, 1, sole);
+      } else {
+        R(20, 49, 6, 8, pantsS); G([[19, 56], [26, 56], [29, 59], [29, 61], [19, 61]], boot); R(19, 60, 10, 1, sole);
+        G([[23, 49], [29, 49], [31, 54], [25, 55]], pants); if (A) E(27, 51, 3.4, 2.4, A.m);
+        G([[24, 53], [31, 52], [35, 56], [35, 58], [25, 58]], boot); R(25, 53, 6, 2, bootL); R(25, 57, 10, 1, sole);
+      }
+      R(22, 28, 6, 5, P.skinS);
+      G([[18, 31], [30, 31], [31.5, 37], [29.5, 47], [19, 47], [17, 37]], body);
+      if (A) {
+        G([[19, 45], [29, 45], [30, 50], [18, 50]], A.mS); R(18, 44, 12, 2, '#2a2a34'); R(21, 29, 8, 3, A.mS);
+        R(31, 36, 1, 5, A.gem); R(30, 35, 1, 1, A.glow || '#4a4a58'); R(30, 41, 1, 1, A.glow || '#4a4a58');
+        if (A.trim) R(18, 44, 12, 1, A.trim);
+      } else if (F) {
+        R(19, 42, 11, 2, F.dressS); G([[26, 43], [30, 43], [34, 58], [29, 58]], F.apron); R(29, 57, 5, 1, F.apronS);
+      } else {
+        R(19, 47, 10, 3, P.tunic); R(19, 49, 10, 1, P.tunicS);
+        if (P.vest) { G([[18, 31], [27, 31], [27, 47], [19, 47], [17, 37]], P.vest); }
+        R(18, 44, 12, 3, P.belt); R(18, 44, 12, 1, P.beltL);
+      }
+      const as = step === 1 ? 3 : step === 2 ? -3 : 0;
+      if (!P.noArm) {
+        E(24 + as * 0.6, 38, 3.3, 7.2, A ? '#40404c' : F ? F.dressL : S(P.tunic, 10));
+        if (F) E(24 + as * 0.3, 35, 4, 4.5, P.tunic);
+        if (A) E(24 + as, 43, 3.4, 3.4, A.m); else if (!F) R(21 + as, 43, 6, 1, P.tunicS);
+        E(24 + as * 1.3, 46.5, 2.6, 2.6, hand);
+      }
+      if (A) { E(24, 33, 6.2, 4.6, A.mL); R(19, 35, 10, 1, A.mS); if (A.trim) R(20, 31, 8, 1, A.trim); }
+      // baş (yandan)
+      E(25, 19, 10.6, 11, P.skin); R(35, 20, 2, 3, P.skin); E(22, 21, 2, 2.6, P.skinS);
+      R(30, 19, 3, 4, eye); R(30, 19, 1, 2, '#ffffff'); R(29, 16, 5, 1, P.hairS); R(32, 26, 3, 1, lip); E(29, 24.5, 2, 1.2, P.blush);
+      if (P.beard) { G([[25, 22], [28, 24], [35, 24], [35.5, 28], [31, 31], [25, 29]], P.hair); R(32, 26, 3, 1, lip); }
+      if (P.mustache) G([[31, 24], [36, 24], [36, 26], [31, 26]], P.hair);
+      E(24.5, 14, 12, 9.2, P.hair, -99, 15); G([[12.5, 14], [23, 14], [22, 24], [16, 28], [13, 23]], P.hair); R(22, 15, 3, 5, P.hair);
+      G(st === 'messy' ? [[25, 15], [36, 15], [35, 18], [31, 16], [29, 19], [27, 16]] : [[25, 15], [36, 15], [35, 17], [28, 17]], P.hair);
+      R(18, 8, 7, 1, P.hairL); R(20, 7, 3, 1, P.hairL); R(15, 13, 1, 8, P.hairL); R(19, 12, 1, 9, P.hairS); R(28, 8, 1, 5, P.hairS);
+      if (st === 'messy') [[[18, 7], [21, 2], [24, 6]], [[23, 6], [27, 1], [30, 6]], [[29, 7], [34, 4], [34, 9]], [[13, 12], [9, 8], [15, 9]], [[12.5, 17], [8.5, 17], [12, 21]], [[14, 24], [10, 27], [16, 27]]].forEach(t => G(t, P.hair));
+      if (st === 'curly') { [[13, 11, 3], [16, 7, 3], [21, 5, 3.2], [27, 5, 3.2], [33, 8, 3], [12, 16, 2.6], [13, 21, 2.6], [15, 25, 2.4], [30, 16, 2.2]].forEach(([x, y, q]) => E(x, y, q, q, P.hair)); [[15, 7], [21, 4], [28, 5], [12, 15]].forEach(([x, y]) => R(x, y, 2, 1, P.hairL)); }
+      if (st === 'long') { G([[12, 14], [21, 14], [20, 37], [12, 38], [10.5, 24]], P.hair); R(14, 18, 1, 18, P.hairS); R(17, 20, 1, 16, P.hairL); }
+      if (st === 'bun') { E(13, 9, 5.2, 4.8, P.hair); R(11, 6, 3, 1, P.hairL); }
+    }
+  },
+  // Otomatik hacim: her renk bölgesinin sol-üst kenarı aydınlanır, sağ-alt kenarı gölgelenir (kare görünümü yumuşatır)
+  bevel(ctx, W, H) {
+    let id; try { id = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
+    const s = new Uint8ClampedArray(id.data), d = id.data;
+    const same = (i, x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return false; const j = (y * W + x) * 4; return s[j + 3] > 200 && Math.abs(s[i] - s[j]) + Math.abs(s[i + 1] - s[j + 1]) + Math.abs(s[i + 2] - s[j + 2]) < 30; };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (s[i + 3] < 200 || s[i] + s[i + 1] + s[i + 2] < 150) continue;
+      const u = same(i, x, y - 1), dn = same(i, x, y + 1), lf = same(i, x - 1, y), rt = same(i, x + 1, y);
+      let v = 0;
+      if (!u && dn) v += 14; if (!lf && rt) v += 10;
+      if (!dn && u) v -= 22; if (!rt && lf) v -= 18;
+      if (!v && u && dn && lf && rt) {
+        if (!same(i, x, y - 2) || !same(i, x - 2, y)) v += 6;
+        if (!same(i, x, y + 2) || !same(i, x + 2, y)) v -= 10;
+      }
+      if (v) { d[i] = s[i] + v; d[i + 1] = s[i + 1] + v; d[i + 2] = s[i + 2] + v * 0.8; }
+    }
+    ctx.putImageData(id, 0, 0);
+  },
+  humanSheet(scene, key, P, repaint) {
+    const FW = 48, FH = 64;
+    let tex, ctx;
+    if (repaint) { tex = scene.textures.get(key); ctx = tex.getContext(); ctx.clearRect(0, 0, FW * 9, FH); }
+    else { ({ tex, ctx } = this.canvasHi(scene, key, FW * 9, FH)); this.scales[key] = 3 / 8; }
+    for (let dir = 0; dir < 3; dir++) for (let step = 0; step < 3; step++) this.human(ctx, (dir * 3 + step) * FW, dir, step, P);
+    this.bevel(ctx, FW * 9, FH);
+    this.outline(ctx, FW * 9, FH, '#2a1a1c');
+    tex.refresh();
+    if (!repaint) for (let i = 0; i < 9; i++) tex.add(i, 0, i * FW, 0, FW, FH);
+  },
+  scales: {},
+  // Oyuncunun o anki görünümü: seçili avatar + kuşanılan zırh + zırh taşının elementi
+  heroPalette(avatarId) {
+    const a = AVATARS.find(v => v.id === (avatarId || PlayerData.avatar)) || AVATARS[0];
+    const it = avatarId ? null : ITEMS[PlayerData.equipped.armor], el = ELEMENTS[PlayerData.element];
+    return this.palette(a, it && { m: it.col[0], mL: it.col[1], mS: it.col[2], trim: it.trim, gem: el || '#34343e', glow: el || null });
+  },
+  // Avatar önizlemesi (seçim ekranı için)
+  portrait(avatarId) {
+    const c = document.createElement('canvas'); c.width = 48; c.height = 64;
+    const ctx = c.getContext('2d'); this.human(ctx, 0, 0, 0, this.heroPalette(avatarId)); this.bevel(ctx, 48, 64); this.outline(ctx, 48, 64, '#2a1a1c');
+    return c.toDataURL();
+  },
+  hero(scene) {
+    this.humanSheet(scene, 'hero', Object.assign(this.heroPalette(), { noArm: true })); this.armSheet(scene, this.heroPalette());
+    this.humanSheet(scene, 'npc', this.palette({ style: 'short', hair: '#c8702a', tunic: '#4a9a58', vest: '#6a4428', pants: '#5a4a3c', mustache: true }));
+    const sh = this.canvas(scene, 'shadow', 14, 5);
+    sh.ctx.fillStyle = 'rgba(20,16,30,0.35)';
+    sh.ctx.fillRect(2, 0, 10, 5); sh.ctx.fillRect(0, 1, 14, 3);
+    sh.tex.refresh();
+  },
+  paintHero(scene) { this.humanSheet(scene, 'hero', Object.assign(this.heroPalette(), { noArm: true }), true); this.armSheet(scene, this.heroPalette(), true); },
+  // Silah kolu: omuzdan (sol uç) ele doğru sağa bakar; oyunda omuz etrafında döner. El belirgin: başparmak ve parmak çizgileri.
+  armSheet(scene, P, repaint) {
+    const W = 26, H = 14, A = P.armor, F = A ? null : P.female;
+    let tex, ctx;
+    if (repaint) { tex = scene.textures.get('heroArm'); ctx = tex.getContext(); ctx.clearRect(0, 0, W, H); }
+    else { ({ tex, ctx } = this.canvasHi(scene, 'heroArm', W, H)); this.scales.heroArm = 3 / 8; }
+    const R = (x, y, w, h, c) => this.px(ctx, x, y, c, w, h), E = (cx, cy, rx, ry, c) => this.ell(ctx, cx, cy, rx, ry, c);
+    const slv = A ? '#3a3a46' : this.shade(P.tunic, 6), slvS = A ? '#22222c' : P.tunicS, hand = A ? A.m : P.skin, handS = A ? A.mS : P.skinS;
+    E(9, 7, 7.5, 3.8, slv); if (F) E(7, 7, 6, 4.6, P.tunic);
+    if (A) { E(14, 7, 3.6, 4.2, A.m); R(12, 4, 1, 6, A.mS); } else R(14, 4, 2, 6, slvS);
+    E(20, 7, 3.6, 3.4, hand); R(18, 3, 3, 2, hand);                       // avuç ve başparmak
+    R(22, 5, 2, 1, handS); R(22, 7, 2, 1, handS); R(22, 9, 1, 1, handS);  // parmak çizgileri
+    R(17, 10, 5, 1, handS);
+    this.bevel(ctx, W, H); this.outline(ctx, W, H, '#2a1a1c');
+    tex.refresh();
+  },
+
+  // Yüksek yoğunluklu zemin karoları (32 piksel)
+  tilesHi(scene) {
+    const T = 32, P = PALETTE, r = this.rng(4242), { tex, ctx } = this.canvasHi(scene, 'tilesHi', T * 10, T);
+    const px = (x, y, c, w = 1, h = 1) => this.px(ctx, x, y, c, w, h), ri = n => Math.floor(r() * n);
+    // 0-3: çimen
+    for (let v = 0; v < 4; v++) {
+      const o = v * T; px(o, 0, P.grass, T, T);
+      for (let i = 0; i < 26; i++) { const x = ri(T - 1), y = ri(T - 2); px(o + x, y, i % 3 ? P.grassDark : P.grassLight, 1, 2); }
+      for (let i = 0; i < 5 + v * 2; i++) { const x = 2 + ri(T - 6), y = 3 + ri(T - 7); px(o + x, y, P.grassLight, 1, 3); px(o + x + 1, y + 1, P.grassDark, 1, 2); px(o + x - 1, y + 1, P.grassLight, 1, 1); }
+      if (v === 3) for (let i = 0; i < 3; i++) { const x = 3 + ri(24), y = 3 + ri(24); px(o + x, y, '#5c8440', 3, 2); px(o + x + 1, y - 1, '#5c8440', 2, 1); }
+    }
+    // 4: toprak yol
+    let o = 4 * T; px(o, 0, P.path, T, T);
+    for (let i = 0; i < 34; i++) px(o + ri(T - 1), ri(T), i % 2 ? P.pathDark : P.pathLight, 1 + ri(2), 1);
+    for (let i = 0; i < 4; i++) { const x = 2 + ri(26), y = 2 + ri(26); px(o + x, y, P.pathLight, 3, 2); px(o + x, y + 2, P.pathDark, 3, 1); }
+    // 5: su, 9: su (üst kıyı)
+    [5, 9].forEach(ix => {
+      const w = ix * T; px(w, 0, P.water, T, T);
+      for (let i = 0; i < 6; i++) { const x = ri(T - 9), y = (ix === 9 ? 10 : 2) + ri(T - (ix === 9 ? 13 : 5)); px(w + x, y, P.waterLight, 5 + ri(4), 1); px(w + x + 2, y + 1, P.waterDark, 4, 1); }
+      for (let i = 0; i < 8; i++) px(w + ri(T - 2), ri(T), P.waterDark, 2, 1);
+      if (ix === 9) { px(w, 0, '#5c8440', T, 3); px(w, 3, '#6b4a32', T, 2); px(w, 5, P.waterDark, T, 3); for (let x = 0; x < T; x += 5) px(w + x, 8, P.waterLight, 3, 1); }
+    });
+    // 6: taş meydan
+    o = 6 * T; px(o, 0, P.cobbleDark, T, T);
+    for (let row = 0; row < 4; row++) for (let x = (row % 2 ? -8 : 0); x < T; x += 16) {
+      const x0 = Math.max(0, x + 1), w = Math.min(T, x + 15) - x0, y = row * 8 + 1, c = [P.cobble, '#b0acb8', '#9e9aa8'][ri(3)];
+      px(o + x0, y, c, w, 6); px(o + x0, y, P.cobbleLight, w, 1); px(o + x0, y + 5, '#928e9c', w, 1);
+      if (r() < 0.4) px(o + x0 + 2 + ri(Math.max(1, w - 5)), y + 2 + ri(2), P.cobbleDark, 2, 1);
+    }
+    // 7: kaya duvar
+    o = 7 * T; px(o, 0, P.wall, T, T); px(o, 0, P.wallTop, T, 12); px(o, 12, P.wallDark, T, 2); px(o, 0, '#b4aebc', T, 2);
+    for (let i = 0; i < 10; i++) px(o + ri(T - 3), 2 + ri(9), i % 2 ? '#928c9a' : '#b4aebc', 3, 1);
+    for (let row = 0; row < 2; row++) for (let x = (row ? -6 : 0); x < T; x += 12) { px(o + Math.max(0, x), 15 + row * 8, P.wallDark, 1, 8); }
+    px(o, 22, P.wallDark, T, 1); px(o, 30, P.wallDark, T, 2);
+    for (let i = 0; i < 8; i++) px(o + ri(T - 3), 15 + ri(14), '#8c8694', 3, 1);
+    // 8: sürülmüş toprak
+    o = 8 * T; px(o, 0, P.soil, T, T);
+    for (let y = 3; y < T; y += 8) { px(o, y, P.soilDark, T, 3); px(o, y + 3, '#a07850', T, 1); }
+    for (let i = 0; i < 14; i++) px(o + ri(T - 2), ri(T), i % 2 ? P.soilDark : '#a07850', 2, 1);
+    tex.refresh();
+  },
+
+  // Doğa: ağaç, çalı, kaya, çiçek, ot (yüksek yoğunlukta, öbek öbek yapraklar)
+  nature(scene) {
+    const P = PALETTE;
+    const clump = (ctx, cx, cy, r) => {
+      this.blob(ctx, cx, cy, r + 1, P.leafDark); this.blob(ctx, cx, cy, r, P.leaf);
+      this.blob(ctx, cx - 2, cy - 3, r - 4, P.leafMid);
+      if (r > 9) this.blob(ctx, cx - 4, cy - 6, r - 9, P.leafLight);
+    };
+    const leaves = (ctx, r, n, x0, y0, w, h) => {
+      for (let i = 0; i < n; i++) {
+        const x = x0 + Math.floor(r() * w), y = y0 + Math.floor(r() * h);
+        let d; try { d = ctx.getImageData(x, y, 1, 1).data; } catch (e) { return; }
+        if (d[3] < 200 || d[1] < 100) continue;
+        this.px(ctx, x, y, i % 3 ? P.leafLight : P.leafDark, 2, 1); this.px(ctx, x + 1, y + 1, i % 3 ? P.leafMid : P.leafDark, 1, 1);
+      }
+    };
+    // Yapraklı ağaç: kalın köklü gövde, öbek öbek açık yeşil taç
+    const TW = { d: '#5e3a1e', m: '#8a5a30', l: '#b07a40', h: '#d09a5c' };
+    this.hiDraw(scene, 'tree', 72, 92, d => {
+      d.E(36, 86, 23, 5, 'rgba(20,30,20,0.25)');
+      d.G([[29, 48], [43, 48], [44, 74], [51, 86], [41, 83], [36, 88], [31, 83], [21, 86], [28, 74]], TW.m);
+      d.G([[29, 48], [34, 48], [33, 76], [26, 84], [21, 86], [28, 74]], TW.l);
+      d.G([[40, 48], [43, 48], [44, 74], [51, 86], [45, 84], [41, 76]], TW.d);
+      [[36, 56, 12], [38, 70, 8], [32, 62, 6]].forEach(([x, y, h]) => d.R(x, y, 1, h, TW.d));
+      d.E(35, 66, 2, 2.6, TW.d);
+    }, { line: '#1e3a34', bevel: false, after: d => {
+      const ctx = d.ctx, r = this.rng(31), C = ['#2f6a50', '#4c9a48', '#74c048', '#a4dc5c'];
+      const cl = (cx, cy, q) => { this.blob(ctx, cx, cy, q + 1, C[0]); this.blob(ctx, cx, cy - 1, q, C[1]); this.blob(ctx, cx - 2, cy - 3, q - 4, C[2]); if (q > 9) this.blob(ctx, cx - 4, cy - 6, q - 9, C[3]); };
+      [[36, 17, 15], [20, 27, 14], [52, 27, 14], [14, 41, 12], [58, 41, 12], [30, 37, 16], [44, 39, 15], [24, 51, 11], [48, 52, 11], [36, 53, 12]].forEach(([x, y, q]) => cl(x, y, q));
+      for (let i = 0; i < 190; i++) {
+        const x = 2 + Math.floor(r() * 68), y = 2 + Math.floor(r() * 62);
+        let px; try { px = ctx.getImageData(x, y, 1, 1).data; } catch (e) { break; }
+        if (px[3] < 200 || px[1] < 100) continue;
+        this.px(ctx, x, y, i % 3 ? C[3] : C[0], 2, 1); this.px(ctx, x + 1, y + 1, i % 3 ? C[2] : C[0], 1, 1);
+      }
+    } });
+    // Çam ağacı: kat kat sarkan dallar
+    this.hiDraw(scene, 'pine', 60, 104, d => {
+      d.E(30, 98, 19, 5, 'rgba(20,30,20,0.25)');
+      d.G([[25, 78], [35, 78], [36, 93], [42, 100], [33, 98], [30, 102], [27, 98], [18, 100], [24, 93]], '#7a4a30');
+      d.G([[25, 78], [29, 78], [28, 94], [22, 99], [18, 100], [24, 93]], '#a06a40'); d.R(32, 80, 1, 14, '#523020');
+    }, { line: '#15302c', bevel: false, after: d => {
+      const tier = (top, bot, hw, c, lean) => {
+        const pts = [[30 + lean, top], [30 - hw * 0.45, (top + bot) / 2 - 2], [30 - hw, bot - 3]];
+        for (let x = -hw + 4, k = 0; x < hw; x += 5, k++) pts.push([30 + x, bot + (k % 2 ? -4 : 2)]);
+        pts.push([30 + hw, bot - 3], [30 + hw * 0.45, (top + bot) / 2 - 2]);
+        d.G(pts, c);
+      };
+      [[60, 88, 27], [46, 74, 24], [32, 60, 20], [18, 45, 15], [3, 30, 10]].forEach(([t, b, hw]) => {
+        tier(t, b, hw, '#1f5446', 0); tier(t, b - 6, hw * 0.78, '#2f7a54', -1); tier(t + 2, b - 13, hw * 0.45, '#58a85a', -2);
+      });
+      d.R(29, 0, 2, 6, '#1f5446');
+    } });
+    // Kütük: köklü, üstünde yaş halkaları
+    this.hiDraw(scene, 'stump', 30, 24, d => {
+      d.E(15, 20, 13, 3.5, 'rgba(20,30,20,0.25)');
+      d.G([[7, 8], [23, 8], [24, 15], [29, 21], [20, 19], [15, 22], [10, 19], [1, 21], [6, 15]], TW.m);
+      d.G([[7, 8], [11, 8], [10, 16], [5, 20], [1, 21], [6, 15]], TW.l);
+      d.E(15, 8, 8.5, 4, '#dcb47c'); d.E(15, 8, 5.5, 2.4, '#b88a50'); d.E(15, 8, 2.5, 1.1, '#dcb47c');
+      d.R(14, 12, 1, 6, TW.d); d.R(19, 12, 1, 5, TW.d);
+    });
+    // Devrilmiş tomruk (2 çeşit: düz ve yosunlu)
+    const logs = this.hiDraw(scene, 'logs', 96, 26, d => {
+      [0, 48].forEach((o, i) => {
+        d.E(o + 24, 21, 20, 3.5, 'rgba(20,30,20,0.25)');
+        d.G([[o + 6, 8], [o + 38, 5], [o + 45, 9], [o + 44, 16], [o + 12, 20], [o + 5, 17]], '#7a4a2c');
+        d.G([[o + 6, 8], [o + 38, 5], [o + 43, 8], [o + 10, 11]], '#a06c40');
+        d.G([[o + 22, 7], [o + 24, 1], [o + 28, 2], [o + 27, 7]], '#7a4a2c');
+        d.G([[o + 38, 5], [o + 46, 6], [o + 45, 9]], '#5a3420');
+        [[14, 13, 9], [26, 12, 11], [20, 16, 8]].forEach(([x, y, w]) => d.R(o + x, y, w, 1, '#5a3420'));
+        d.E(o + 8, 13, 4, 5.5, '#d0a068'); d.E(o + 8, 13, 2.2, 3.2, '#a87a48');
+        if (i) { [[18, 8, 6, 3], [27, 9, 7, 3.5], [36, 8, 4, 2.5]].forEach(([x, y, a, b]) => d.E(o + x, y, a, b, '#3f7a3c')); [[17, 7, 3, 1.5], [28, 8, 4, 1.6]].forEach(([x, y, a, b]) => d.E(o + x, y, a, b, '#6aa84c')); }
+      });
+    });
+    logs.add(0, 0, 0, 0, 48, 26); logs.add(1, 0, 48, 0, 48, 26);
+    // Çalı
+    ({ tex, ctx } = this.canvasHi(scene, 'bush', 40, 28)); r = this.rng(32);
+    for (let x = -17; x <= 17; x++) this.px(ctx, 20 + x, 25, 'rgba(20,30,20,0.25)', 1, Math.abs(x) < 14 ? 3 : 2);
+    [[20, 11, 10], [10, 16, 9], [30, 16, 9], [20, 18, 9]].forEach(([x, y, rad]) => clump(ctx, x, y, rad));
+    leaves(ctx, r, 40, 1, 1, 38, 24);
+    [[12, 14], [26, 10], [29, 19]].forEach(([x, y]) => { this.px(ctx, x, y, '#d8423c', 2, 2); this.px(ctx, x, y, '#ff8a7a', 1, 1); });
+    tex.refresh();
+    // Kayalar: köşeli, yüzeyli; 4 çeşit
+    const ST = { d: '#62626e', m: '#8a8a96', l: '#b2b2be', h: '#d2d2dc', k: '#44444e' };
+    const rock = this.hiDraw(scene, 'rock', 160, 30, d => {
+      const sh = o => d.E(o + 20, 26, 16, 3, 'rgba(20,24,30,0.25)');
+      let o = 0; sh(o); // iri kaya
+      d.G([[o + 7, 25], [o + 4, 16], [o + 9, 7], [o + 19, 3], [o + 29, 6], [o + 35, 15], [o + 32, 25]], ST.m);
+      d.G([[o + 9, 7], [o + 19, 3], [o + 29, 6], [o + 23, 12], [o + 13, 13]], ST.l); d.G([[o + 12, 5], [o + 19, 3], [o + 24, 5], [o + 16, 7]], ST.h);
+      d.G([[o + 29, 6], [o + 35, 15], [o + 32, 25], [o + 23, 25], [o + 23, 12]], ST.d);
+      d.G([[o + 13, 13], [o + 23, 12], [o + 23, 13], [o + 13, 14]], ST.k); d.R(o + 23, 12, 1, 9, ST.k); d.R(o + 10, 17, 5, 1, ST.d);
+      d.E(o + 6, 26, 3, 2, ST.m); d.E(o + 34, 26, 2.4, 1.6, ST.l);
+      o = 40; sh(o); // sivri kaya
+      d.G([[o + 14, 26], [o + 11, 15], [o + 17, 2], [o + 22, 11], [o + 26, 26]], ST.m);
+      d.G([[o + 14, 26], [o + 11, 15], [o + 17, 2], [o + 18, 26]], ST.l); d.G([[o + 13, 14], [o + 17, 2], [o + 17, 14]], ST.h);
+      d.G([[o + 22, 11], [o + 26, 26], [o + 21, 26]], ST.d);
+      d.G([[o + 25, 26], [o + 27, 18], [o + 32, 20], [o + 34, 26]], ST.m); d.G([[o + 27, 18], [o + 32, 20], [o + 29, 22]], ST.l);
+      d.E(o + 9, 26, 3, 2, ST.d);
+      o = 80; sh(o); // yassı katmanlı kaya
+      d.G([[o + 3, 23], [o + 5, 17], [o + 31, 16], [o + 36, 21], [o + 33, 26], [o + 6, 27]], ST.m);
+      d.G([[o + 5, 17], [o + 31, 16], [o + 28, 19], [o + 8, 20]], ST.l); d.G([[o + 31, 16], [o + 36, 21], [o + 33, 26], [o + 28, 26], [o + 28, 19]], ST.d);
+      d.G([[o + 8, 16], [o + 11, 9], [o + 26, 8], [o + 30, 14], [o + 27, 17], [o + 10, 18]], ST.m);
+      d.G([[o + 11, 9], [o + 26, 8], [o + 23, 11], [o + 13, 12]], ST.h); d.G([[o + 26, 8], [o + 30, 14], [o + 27, 17], [o + 23, 17], [o + 23, 11]], ST.d);
+      d.R(o + 16, 21, 1, 5, ST.k); d.R(o + 17, 13, 1, 4, ST.k);
+      o = 120; sh(o); // kaya öbeği
+      d.G([[o + 14, 26], [o + 16, 10], [o + 25, 6], [o + 31, 14], [o + 30, 26]], ST.m);
+      d.G([[o + 16, 10], [o + 25, 6], [o + 31, 14], [o + 24, 15], [o + 18, 14]], ST.l); d.G([[o + 24, 15], [o + 31, 14], [o + 30, 26], [o + 25, 26]], ST.d);
+      d.G([[o + 3, 26], [o + 5, 16], [o + 13, 13], [o + 18, 19], [o + 17, 26]], ST.m);
+      d.G([[o + 5, 16], [o + 13, 13], [o + 18, 19], [o + 10, 19]], ST.h); d.G([[o + 12, 19], [o + 18, 19], [o + 17, 26], [o + 13, 26]], ST.d);
+      d.G([[o + 28, 26], [o + 30, 19], [o + 35, 20], [o + 37, 26]], ST.l); d.E(o + 22, 27, 2.6, 1.6, ST.m);
+      // yosun lekeleri
+      [[8, 20], [52, 22], [88, 22], [126, 21]].forEach(([x, y]) => { d.R(x, y, 4, 2, '#5a9a48'); d.R(x + 1, y - 1, 2, 1, '#8cc45c'); });
+    }, { bevel: false, line: '#32323c' });
+    for (let i = 0; i < 4; i++) rock.add(i, 0, i * 40, 0, 40, 30);
+    // Çiçekler: 6 renk
+    const petals = [['#e8554e', '#ff8a7a'], ['#f0c840', '#fff0a0'], ['#f4f0e8', '#ffffff'], ['#f09038', '#ffc070'], ['#6ab8e8', '#b0e0ff'], ['#e87aa8', '#ffb8d4']];
+    ({ tex, ctx } = this.canvasHi(scene, 'flower', 12 * petals.length, 16));
+    petals.forEach(([c, l], i) => {
+      const x = i * 12;
+      this.px(ctx, x + 5, 7, P.leaf, 2, 9); this.px(ctx, x + 2, 10, P.leafMid, 3, 2); this.px(ctx, x + 7, 12, P.leafMid, 3, 2);
+      this.px(ctx, x + 4, 0, c, 4, 8); this.px(ctx, x + 2, 2, c, 8, 4); this.px(ctx, x + 4, 0, l, 2, 2); this.px(ctx, x + 2, 2, l, 2, 2);
+      this.px(ctx, x + 5, 3, i === 1 ? '#f09038' : '#ffe14a', 2, 2);
+    });
+    tex.refresh(); petals.forEach((_, i) => tex.add(i, 0, i * 12, 0, 12, 16));
+    // Ot öbeği
+    ({ tex, ctx } = this.canvasHi(scene, 'tuft', 16, 12));
+    [[1, 6, 6], [4, 2, 10], [7, 0, 12], [10, 3, 9], [13, 7, 5]].forEach(([x, y, h], i) => { this.px(ctx, x, y, i % 2 ? P.leafMid : '#4f8a3c', 2, h); this.px(ctx, x, y, P.leafLight, 1, 2); });
+    tex.refresh();
+  },
+
+  items(scene) {
+    const k = PALETTE.outline;
+    Object.entries(ITEMS).forEach(([id, it]) => {
+      if (WEAPON_CLASS[it.type]) return; // silahlar weapons() içinde çizilirde çizilir
+      if (it.type === 'dagger' || it.type === 'sword') {
+        const L = it.len, { tex, ctx } = this.canvas(scene, 'it_' + id, 9 + L, 7);
+        this.px(ctx, 0, 2, k, 4, 3); this.px(ctx, 1, 3, '#a06a34', 3, 1);
+        this.px(ctx, 4, 0, k, 3, 7); this.px(ctx, 5, 1, it.hilt, 1, 5);
+        this.px(ctx, 7, 1, k, L + 2, 5); this.px(ctx, 7, 2, it.blade[0], L, 3);
+        this.px(ctx, 7, 2, it.blade[1], L, 1); this.px(ctx, 7, 4, it.blade[2], L, 1); this.px(ctx, 7 + L, 3, it.blade[0]);
+        tex.refresh();
+      } else if (it.type === 'shield') {
+        const { tex, ctx } = this.canvas(scene, 'it_' + id, 11, 13);
+        this.px(ctx, 0, 0, k, 11, 9); this.px(ctx, 1, 9, k, 9, 2); this.px(ctx, 3, 11, k, 5, 2);
+        this.px(ctx, 1, 1, it.col[0], 9, 8); this.px(ctx, 2, 9, it.col[0], 7, 1); this.px(ctx, 4, 10, it.col[0], 3, 2);
+        this.px(ctx, 1, 1, it.col[1], 9, 1); this.px(ctx, 1, 1, it.col[1], 1, 7);
+        this.px(ctx, 4, 4, it.col[2], 3, 3); this.px(ctx, 5, 5, it.col[1]);
+        tex.refresh();
+      } else {
+        const { tex, ctx } = this.canvas(scene, 'it_' + id, 14, 12);
+        this.px(ctx, 0, 0, k, 14, 5); this.px(ctx, 2, 5, k, 10, 7);
+        ctx.clearRect(5, 0, 4, 2);
+        this.px(ctx, 1, 1, it.col[0], 12, 3); this.px(ctx, 3, 4, it.col[0], 8, 7);
+        ctx.clearRect(6, 0, 2, 2); this.px(ctx, 5, 2, k, 4, 1);
+        this.px(ctx, 1, 1, it.col[1], 4, 1); this.px(ctx, 9, 1, it.col[1], 4, 1); this.px(ctx, 3, 4, it.col[1], 1, 6);
+        this.px(ctx, 3, 9, it.col[2], 8, 1); this.px(ctx, 6, 5, it.col[2], 2, 3);
+        tex.refresh();
+      }
+    });
+  },
+
+  props(scene) {
+    const k = PALETTE.outline, P = PALETTE;
+    const mk = (key, w, h, fn) => { const { tex, ctx } = this.canvas(scene, key, w, h); fn(ctx, (x, y, c, ww = 1, hh = 1) => this.px(ctx, x, y, c, ww, hh)); tex.refresh(); return tex; };
+    mk('glow', 18, 18, c => this.blob(c, 9, 9, 8, 'rgba(255,226,130,0.28)'));
+    mk('sprout', 6, 5, (c, px) => { px(2, 2, P.leafMid, 2, 3); px(0, 1, P.leafLight, 2, 2); px(4, 0, P.leafLight, 2, 2); });
+    mk('pumpkin', 9, 8, (c, px) => { px(0, 2, k, 9, 6); px(1, 3, '#ff9a3a', 7, 4); px(1, 3, '#ffb85a', 7, 1); px(3, 3, '#e07a20', 1, 4); px(5, 3, '#e07a20', 1, 4); px(4, 0, P.leaf, 1, 3); });
+    mk('lily', 7, 5, (c, px) => { px(1, 0, '#46ac5c', 5, 5); px(0, 1, '#46ac5c', 7, 3); px(1, 1, '#84d86c', 2, 1); px(4, 2, '#ff8ab8', 2, 2); });
+    mk('tent', 28, 22, (c, px) => {
+      for (let y = 0; y < 21; y++) { const h = 1 + Math.round(y * 13 / 20); px(14 - h - 1, y, k, h * 2 + 2, 2); }
+      for (let y = 1; y < 21; y++) { const h = Math.round(y * 13 / 20); for (let x = -h; x < h; x++) px(14 + x, y, Math.floor((x + 40) / 4) % 2 ? '#ffb03a' : '#fff4d6'); }
+      for (let y = 10; y < 21; y++) { const h = Math.round((y - 9) * 4 / 11); px(14 - h, y, '#5a3a22', h * 2, 1); }
+    });
+    const fire = mk('fire', 20, 12, (c, px) => {
+      [0, 10].forEach(o => { px(o, 9, k, 10, 3); px(o + 1, 10, '#7a4c2c', 8, 1); });
+      px(3, 3, '#ff9a3a', 4, 6); px(4, 1, '#ff9a3a', 1, 2); px(4, 5, '#ffe14a', 2, 4);
+      px(12, 4, '#ff9a3a', 5, 5); px(15, 2, '#ff9a3a', 2, 2); px(14, 6, '#ffe14a', 2, 3);
+    });
+    fire.add(0, 0, 0, 0, 10, 12); fire.add(1, 0, 10, 0, 10, 12);
+    // Portal: taş halka + mor girdap
+    mk('portalBase', 54, 54, c => { this.blob(c, 27, 27, 26, k); this.blob(c, 27, 27, 25, '#b4b0c0'); this.blob(c, 27, 27, 22, '#9692a4');
+      for (let a = 0; a < 360; a += 30) { const r = a * Math.PI / 180; this.px(c, 27 + Math.round(23.5 * Math.cos(r)), 27 + Math.round(23.5 * Math.sin(r)), '#5a5266', 2, 2); }
+      this.blob(c, 27, 27, 19, k); this.blob(c, 27, 27, 18, '#3a1a78'); });
+    mk('portalGlow', 38, 38, c => { this.blob(c, 19, 19, 18, '#6a2ed0'); this.blob(c, 19, 19, 14, '#8f4af0'); this.blob(c, 19, 19, 9, '#b87cff'); this.blob(c, 19, 19, 4, '#ecd8ff'); });
+    mk('portalSwirl', 38, 38, c => {
+      for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 110; i++) {
+        const a = i * 0.075 + arm * 2.094, r = 3 + i * 0.13;
+        this.px(c, 19 + Math.round(r * Math.cos(a)), 19 + Math.round(r * Math.sin(a)), i < 40 ? '#ffffff' : '#e4c4ff', i < 60 ? 2 : 1, i < 60 ? 2 : 1);
+      }
+    });
+  },
+
+  // Yeni silahlar: sağa bakar şekilde, yüksek yoğunlukta çizilir
+  grip: {},
+  weapons(scene) {
+    const WD = '#5a3620', WM = '#8a5a34', WL = '#b0804c', S0 = '#a8b0c0', S1 = '#dfe6f0', S2 = '#6a7286', IR = '#474b5a', K = '#2c2c38', GO = '#e0b848';
+    const BZ = '#8a7a5a', BZL = '#b4a47c', BZD = '#5e5240', PG = '#6a5a78', PGL = '#9a8aa8', PGD = '#463a52', CL = '#d4cede', CLD = '#8e86a0';
+    const mk = (key, w, h, grip, fn, o) => { this.grip[key] = grip; return this.hiDraw(scene, key, w, h, fn, Object.assign({ line: '#1c1a22' }, o)); };
+    const flipY = (pts, h) => pts.map(([x, y]) => [x, h - y]);
+    // Kılıç: yuvarlak topuz, sargılı kabza, tahta siperlik, sade çelik namlu
+    mk('it_sword_basic', 50, 18, 8, d => {
+      d.E(3, 9, 3, 3.2, IR); d.R(2, 7, 2, 2, S2); d.R(5, 7, 8, 4, WM); d.R(5, 7, 8, 1, WL); d.R(7, 7, 1, 4, WD); d.R(10, 7, 1, 4, WD);
+      d.G([[13, 1], [17, 1], [17, 17], [13, 17]], WM); d.R(13, 1, 1, 16, WL); d.R(16, 1, 1, 16, WD); d.R(13, 1, 4, 2, WD); d.R(13, 15, 4, 2, WD);
+      d.G([[17, 5], [42, 5], [49, 9], [42, 13], [17, 13]], S0); d.G([[17, 5], [42, 5], [49, 9], [17, 9]], S1); d.R(18, 9, 24, 1, S2); d.R(17, 12, 25, 1, S2);
+    });
+    // El baltası: düz tahta sap, sapın ucuna geçen küçük demir baş, kama biçimli paslı ağız
+    mk('it_axe_war', 46, 24, 7, d => {
+      d.R(0, 13, 37, 4, WM); d.R(0, 13, 37, 1, WL); d.R(0, 16, 37, 1, WD); d.R(0, 12, 4, 6, WD); d.E(38, 15, 3, 3.2, WM); d.R(37, 13, 2, 1, WL);
+      [9, 14].forEach(x => d.R(x, 13, 1, 4, WD));
+      d.G([[30, 12], [33, 4], [42, 1], [46, 6], [41, 11], [37, 12]], '#7c8292'); d.G([[33, 4], [42, 1], [44, 3], [35, 7]], '#a4aab8');
+      d.G([[42, 1], [46, 6], [41, 11], [41, 5]], '#b88a64'); d.R(43, 3, 1, 4, '#dcb48c');
+      d.R(29, 11, 8, 7, IR); d.R(30, 12, 2, 2, S2); d.R(34, 15, 2, 2, K);
+    });
+    // Topuz: ince koyu sap, iki ucunda kanatlı başlar
+    mk('it_mace_iron', 64, 18, 26, d => {
+      d.R(7, 8, 50, 3, '#3c3038'); d.R(7, 8, 50, 1, '#5e4e58'); [20, 23, 40, 43].forEach(x => d.R(x, 7, 2, 5, BZ));
+      d.G([[54, 9.5], [58, 2], [62, 5], [64, 9.5], [62, 14], [58, 17]], S0); d.G([[58, 2], [62, 5], [64, 9.5], [57, 9.5]], S1); d.G([[57, 9.5], [64, 9.5], [62, 14], [58, 17]], S2);
+      d.G([[57, 4], [60, 0], [61, 5]], S1); d.G([[57, 15], [60, 18], [61, 13]], S0); d.R(52, 7, 3, 5, IR);
+      d.G([[9, 9.5], [6, 3], [2, 6], [0, 9.5], [2, 13], [6, 16]], S0); d.G([[6, 3], [2, 6], [0, 9.5], [7, 9.5]], S1); d.R(8, 7, 3, 5, IR);
+    });
+    // Pençe: ele giyilen eldiven, parmak üstlerinden uzanan dört kavisli tırnak (kabza = eldivenin ortası)
+    mk('it_claw_steel', 32, 24, 7, d => {
+      d.G([[1, 6], [11, 5], [14, 8], [14, 16], [11, 19], [1, 18]], PG); d.R(1, 6, 3, 12, PGD); d.R(9, 6, 4, 12, PGL); d.R(5, 8, 3, 2, PGL); d.R(5, 14, 3, 2, PGD);
+      const c = [[[11, 5], [20, 1], [29, 3], [21, 4.5], [13, 8]], [[13, 8.5], [23, 6.5], [32, 9.5], [23, 10], [14, 11]], [[14, 12.5], [23, 13.5], [32, 15.5], [22, 16], [14, 15]], [[12, 16.5], [21, 19], [28, 22.5], [19, 21], [11, 19]]];
+      c.forEach(q => d.G(q, CL)); [[14, 6.5, 12], [15, 10.5, 13], [15, 15.5, 13], [13, 19.5, 11]].forEach(([x, y, w]) => d.R(x, y, w, 1, CLD));
+    });
+    // Zincirli gürz: kavisli tahta sap + (ayrı parça) zincir halkaları ve düz demir top
+    const flailHandle = d => { d.G([[0, 7], [4, 3], [16, 3], [19, 5], [19, 8], [4, 9]], WM); d.G([[0, 7], [4, 3], [16, 3], [4, 5]], WL); d.E(2, 7, 2.3, 2.8, GO); d.R(17, 3, 3, 6, IR); [8, 12].forEach(x => d.R(x, 4, 1, 5, WD)); };
+    const ball = (d, x, y) => { d.E(x, y, 6.5, 6.5, IR); d.E(x - 2, y - 2, 2.8, 2.8, '#7a8092'); d.R(x - 3, y - 3, 2, 1, '#b4bac8'); d.E(x + 2, y + 3, 2.4, 1.6, K); };
+    mk('hand_flail_spike', 22, 12, 7, flailHandle);
+    mk('flail_head', 16, 16, 8, d => ball(d, 8, 8));
+    mk('link', 7, 5, 3, d => { d.E(3.5, 2.5, 3.4, 2.4, '#7e8496'); d.R(2, 2, 3, 1, K); }, { bevel: false });
+    mk('it_flail_spike', 62, 30, 7, d => { flailHandle(d); [[23, 6], [28, 9], [33, 12], [38, 15], [43, 18]].forEach(([x, y], i) => { d.E(x, y, 3, 2.2, i % 2 ? '#6c7284' : '#8a90a2'); d.R(x - 1, y, 2, 1, K); }); ball(d, 52, 22); });
+    // Zincirli hançer: sargılı sap + (ayrı parça) çubuk halkalı zincir ve ok ucu biçimli bıçak
+    const whipHandle = d => { d.R(2, 3, 14, 4, WM); d.R(2, 3, 14, 1, WL); [5, 8, 11].forEach(x => d.R(x, 3, 1, 4, WD)); d.E(2, 5, 2.2, 2.8, IR); d.R(15, 2, 3, 6, IR); };
+    const dart = (d, x, y) => { d.G([[x + 2, y], [x + 9, y - 5], [x + 22, y], [x + 9, y + 5]], S0); d.G([[x + 9, y - 5], [x + 22, y], [x + 4, y]], S1); d.G([[x + 7, y - 3], [x + 2, y - 6], [x + 9, y - 4]], S0); d.G([[x + 7, y + 3], [x + 2, y + 6], [x + 9, y + 4]], S2); d.R(x, y - 1, 3, 2, IR); };
+    mk('hand_whip_chain', 20, 10, 6, whipHandle);
+    mk('whip_head', 24, 14, 1, d => dart(d, 0, 7));
+    mk('barlink', 9, 4, 4, d => { d.R(0, 0, 9, 4, '#5a6072'); d.R(1, 1, 7, 1, '#9096a8'); d.R(0, 3, 9, 1, K); }, { bevel: false });
+    mk('it_whip_chain', 78, 26, 6, d => { whipHandle(d); [[20, 5], [27, 8], [34, 12], [41, 15], [48, 17]].forEach(([x, y], i) => { d.R(x, y, 6, 3, i % 2 ? '#5a6072' : '#7c8294'); d.R(x + 1, y, 4, 1, '#a0a6b6'); }); dart(d, 55, 19); });
+    // Uzun balta: ince uzun sap, yuvarlak topuz, açık ağızlı koyu sırtlı hilal baş
+    mk('it_poleaxe_long', 78, 28, 18, d => {
+      d.R(3, 13, 62, 3, WM); d.R(3, 13, 62, 1, WL); d.E(2.5, 14.5, 2.6, 3, BZ); [26, 30, 34].forEach(x => d.R(x, 13, 1, 3, WD));
+      d.G([[56, 13], [60, 3], [70, 1], [76, 9], [74, 20], [67, 25], [60, 17]], S0); d.G([[70, 1], [76, 9], [74, 20], [67, 25], [70, 11]], S1);
+      d.G([[56, 13], [60, 3], [64, 3], [62, 15]], S2); d.R(52, 11, 7, 7, IR); d.R(53, 12, 2, 2, S2); d.R(64, 9, 2, 2, K);
+    });
+    // Mızrak: düz sap, koyu bağ, baklava biçimli uç
+    mk('it_spear_wood', 78, 14, 20, d => {
+      d.R(0, 6, 59, 3, WM); d.R(0, 6, 59, 1, WL); d.R(0, 5, 3, 5, WD); [28, 32].forEach(x => d.R(x, 6, 1, 3, WD));
+      d.R(53, 5, 6, 5, K); d.R(54, 5, 1, 5, BZ); d.R(57, 5, 1, 5, BZ);
+      d.G([[58, 7.5], [65, 2], [78, 7.5], [65, 13]], S0); d.G([[65, 2], [78, 7.5], [58, 7.5]], S1); d.R(61, 7, 15, 1, S2);
+    });
+    // Yaba: koyu tunç, ortası düz iki yanı kavisli üç diş
+    mk('it_trident_sea', 76, 27, 20, d => {
+      d.R(0, 12, 52, 3, '#5a4a3c'); d.R(0, 12, 52, 1, '#7e6c54'); d.E(2.5, 13.5, 2.5, 2.8, BZ);
+      const top = [[52, 12], [54, 6], [62, 1.5], [73, 2], [65, 5.5], [59, 8.5], [58, 12]];
+      d.G(top, BZ); d.G(flipY(top, 27), BZD); d.G([[54, 6], [62, 1.5], [73, 2], [62, 3.5]], BZL);
+      d.G([[52, 12], [66, 11.5], [76, 13.5], [66, 15.5], [52, 15]], '#9a927c'); d.G([[52, 12], [66, 11.5], [76, 13.5]], BZL);
+      d.R(48, 10, 5, 7, BZD); d.R(45, 11, 2, 5, BZ);
+    });
+    // Kargı: sap, küçük siperlik, yaprak biçimli geniş namlu
+    mk('it_glaive_moon', 78, 18, 20, d => {
+      d.R(0, 8, 50, 3, WM); d.R(0, 8, 50, 1, WL); d.R(0, 7, 3, 5, WD); [24, 28].forEach(x => d.R(x, 8, 1, 3, WD));
+      d.R(46, 3, 4, 13, BZ); d.R(46, 3, 1, 13, BZL); d.R(49, 3, 1, 13, BZD);
+      d.G([[50, 5], [63, 2], [78, 9.5], [63, 15], [50, 14]], S0); d.G([[50, 5], [63, 2], [78, 9.5], [50, 9.5]], S1); d.R(51, 9, 22, 1, S2);
+    });
+    // Çift ağızlı teber: sapın iki ucunda çifte hilal ve sivri uç
+    mk('it_twin_crescent', 80, 31, 40, d => {
+      d.R(11, 14, 58, 3, WM); d.R(11, 14, 58, 1, WL); [34, 38, 42, 46].forEach(x => d.R(x, 14, 1, 3, WD));
+      const up = [[61, 14], [61, 6], [67, 1], [76, 3], [69, 7], [67, 14]], tip = [[67, 13], [80, 15.5], [67, 18]];
+      const mx = pts => pts.map(([x, y]) => [80 - x, y]);
+      [up, flipY(up, 31)].forEach((q, i) => { d.G(q, i ? S2 : S0); d.G(mx(q), i ? S2 : S0); });
+      d.G([[61, 6], [67, 1], [76, 3], [67, 4]], S1); d.G(mx([[61, 6], [67, 1], [76, 3], [67, 4]]), S1);
+      d.G(tip, S1); d.G(mx(tip), S1); d.R(60, 12, 6, 7, IR); d.R(14, 12, 6, 7, IR);
+    });
+    // Yay: sade kahverengi, uçları dışa kıvrık; kiriş ayrı çizgi
+    const bow = (d, string) => {
+      if (string) d.R(7, 3, 1, 56, '#ece4d4');
+      for (let a = -80; a <= 80; a++) {
+        const q = a * Math.PI / 180, tip = Math.max(0, Math.abs(a) - 62), x = 3 + 16 * Math.cos(q) + tip * 0.3, y = 31 + 29 * Math.sin(q);
+        d.R(x - 1, y - 1, Math.abs(a) > 66 ? 2 : 3, 3, Math.abs(a) > 60 ? WD : WM);
+      }
+      for (let a = -56; a <= 56; a += 2) { const q = a * Math.PI / 180; d.R(3 + 16 * Math.cos(q), 31 + 29 * Math.sin(q) - 1, 1, 1, WL); }
+      d.R(16, 26, 5, 10, WD); d.R(17, 27, 3, 1, BZ); d.R(17, 34, 3, 1, BZ); d.E(6, 2, 2, 2, WM); d.E(6, 60, 2, 2, WM);
+    };
+    mk('it_bow_hunter', 26, 62, 17, d => bow(d, true));
+    mk('hand_bow_hunter', 26, 62, 17, d => bow(d, false));  // elde: kiriş oyunda ayrı çizilir, gerilince bükülür
+    // Kirişi çeken el
+    mk('heroHand', 9, 9, 4, d => { d.E(4.5, 4.5, 3.6, 3.4, '#f2c8a0'); d.R(6, 3, 2, 1, '#d8a47c'); d.R(6, 5, 2, 1, '#d8a47c'); d.R(2, 1, 3, 2, '#f2c8a0'); });
+    // Ok
+    this.hiDraw(scene, 'arrow', 30, 9, d => {
+      d.R(4, 4, 20, 1, WM); d.R(4, 3, 20, 1, WL); d.G([[22, 0.5], [30, 4.5], [22, 8.5]], S1); d.G([[22, 4.5], [30, 4.5], [22, 8.5]], S0);
+      d.G([[0, 0], [7, 3], [7, 6], [0, 9], [3, 4.5]], '#e8554e');
+    }, { bevel: false, line: '#1c1a22' });
+  },
+
+  // Köy eşyaları: ahşap direkli fener, sıra, fıçı, sandık, kuyu, çiçeklik, çit, tabela
+  furniture(scene) {
+    const W = { k: '#3e2616', d: '#5e3a1e', m: '#8a5a30', l: '#b07a40', h: '#d09a5c' }, P = PALETTE;
+    this.hiDraw(scene, 'lamp', 30, 58, d => {
+      d.E(15, 54, 8, 3, 'rgba(20,24,30,0.25)');
+      d.G([[13, 8], [17, 8], [18, 53], [12, 53]], W.m); d.R(13, 8, 1, 45, W.l); d.R(16, 8, 1, 45, W.d);
+      d.E(15, 54, 6, 2.6, '#8a8a96'); d.R(11, 4, 8, 5, W.d); d.R(12, 3, 6, 2, W.m);
+      d.R(3, 10, 24, 3, W.m); d.R(3, 10, 24, 1, W.l);
+      d.G([[13, 22], [13, 19], [6, 13], [5, 15]], W.d); d.G([[17, 22], [17, 19], [24, 13], [25, 15]], W.d);
+      [2, 21].forEach(x => { d.R(x + 3, 13, 1, 4, W.k); d.R(x, 17, 7, 2, W.k); d.R(x + 1, 19, 5, 6, '#ffcc50'); d.R(x + 1, 19, 2, 3, '#fff2b8'); d.R(x + 3, 19, 1, 6, W.k); d.R(x, 25, 7, 2, W.k); });
+    });
+    this.hiDraw(scene, 'bench', 50, 28, d => {
+      d.E(25, 25, 22, 3, 'rgba(20,24,30,0.25)');
+      d.R(5, 2, 3, 22, W.d); d.R(42, 2, 3, 22, W.d);
+      d.R(4, 4, 42, 5, W.l); d.R(4, 10, 42, 4, W.m); d.R(18, 4, 1, 10, W.d); d.R(32, 4, 1, 10, W.d);
+      d.G([[2, 15], [48, 15], [49, 20], [1, 20]], W.h); d.R(1, 20, 48, 2, W.m); d.R(16, 15, 1, 5, W.l); d.R(33, 15, 1, 5, W.l);
+      d.R(5, 22, 4, 5, W.d); d.R(41, 22, 4, 5, W.d);
+    });
+    this.hiDraw(scene, 'barrel', 26, 30, d => {
+      d.E(13, 27, 11, 3, 'rgba(20,24,30,0.25)');
+      d.G([[6, 3], [20, 3], [23, 10], [23, 20], [20, 27], [6, 27], [3, 20], [3, 10]], W.m);
+      [9, 13, 17].forEach(x => d.R(x, 4, 1, 23, W.d)); d.R(5, 6, 2, 19, W.l);
+      d.R(3, 8, 20, 2, '#5a5a68'); d.R(3, 20, 20, 2, '#5a5a68'); d.R(3, 8, 20, 1, '#8a8a98'); d.R(3, 20, 20, 1, '#8a8a98');
+      d.E(13, 4, 7.5, 2.6, W.h); d.E(13, 4, 5, 1.5, W.l);
+    });
+    this.hiDraw(scene, 'crate', 28, 28, d => {
+      d.E(14, 26, 12, 2.5, 'rgba(20,24,30,0.25)');
+      d.R(2, 2, 24, 24, W.l); d.G([[6, 8], [8, 6], [22, 20], [20, 22]], W.m);
+      d.R(2, 2, 24, 4, W.m); d.R(2, 22, 24, 4, W.m); d.R(2, 2, 4, 24, W.m); d.R(22, 2, 4, 24, W.m);
+      [[3, 3], [24, 3], [3, 24], [24, 24]].forEach(([x, y]) => d.R(x, y, 1, 1, W.k)); d.R(8, 12, 1, 8, W.h); d.R(14, 8, 1, 4, W.h);
+    });
+    this.hiDraw(scene, 'well', 42, 50, d => {
+      d.E(21, 46, 19, 4, 'rgba(20,24,30,0.25)');
+      d.E(21, 37, 16, 8, '#8a8a96'); d.E(21, 36, 11.5, 5, '#262e3a'); d.E(21, 37.5, 9.5, 3.2, '#3f6798'); d.R(15, 37, 5, 1, '#84acd4');
+      d.G([[5, 38], [37, 38], [35, 47], [7, 47]], '#8a8a96');
+      [[9, 39, 6], [17, 39, 7], [26, 39, 6], [12, 43, 7], [21, 43, 7], [30, 43, 5]].forEach(([x, y, w]) => { d.R(x, y, w, 3, '#a8a8b4'); d.R(x, y, w, 1, '#c8c8d2'); });
+      d.R(8, 14, 3, 22, W.d); d.R(31, 14, 3, 22, W.d); d.R(11, 20, 20, 2, W.m); d.R(20, 22, 1, 8, '#d8c8a0'); d.R(18, 29, 6, 5, W.m); d.R(18, 29, 6, 1, '#5a5a68');
+      d.G([[1, 15], [21, 2], [41, 15], [39, 18], [3, 18]], '#a8743c'); d.G([[21, 2], [41, 15], [39, 18], [21, 6]], '#8a5a30');
+      [[8, 12, 5], [14, 8, 9], [27, 8, 9], [33, 12, 5]].forEach(([x, y, h]) => d.R(x, y, 1, h, W.d)); d.R(3, 17, 36, 1, W.d);
+    });
+    this.hiDraw(scene, 'planter', 38, 26, d => {
+      d.E(19, 23, 17, 3, 'rgba(20,24,30,0.25)');
+      d.R(3, 13, 32, 10, W.m); d.R(2, 12, 34, 2, W.l); [11, 19, 27].forEach(x => d.R(x, 14, 1, 9, W.d)); d.R(3, 21, 32, 2, W.d);
+      [[8, 10, 5, 3], [17, 9, 6, 3.5], [27, 10, 6, 3], [22, 11, 5, 2.5]].forEach(([x, y, a, b]) => d.E(x, y, a, b, P.leafMid)); d.E(12, 8, 3, 1.5, P.leafLight); d.E(26, 8, 3, 1.5, P.leafLight);
+      [[6, 5, '#e8554e'], [13, 3, '#f0c840'], [20, 5, '#f4f0e8'], [26, 3, '#e87aa8'], [32, 6, '#f09038']].forEach(([x, y, c]) => { d.R(x, y, 4, 4, c); d.R(x + 1, y + 1, 2, 2, '#ffe14a'); d.R(x, y, 1, 1, '#ffffff'); });
+    });
+    this.hiDraw(scene, 'fenceH', 32, 20, d => {
+      d.R(0, 6, 32, 3, W.l); d.R(0, 12, 32, 3, W.m); d.R(0, 8, 32, 1, W.d); d.R(0, 14, 32, 1, W.d);
+      [3, 24].forEach(x => { d.G([[x, 3], [x + 2.5, 0], [x + 5, 3], [x + 5, 19], [x, 19]], W.m); d.R(x, 3, 1, 16, W.h); d.R(x + 4, 3, 1, 16, W.d); });
+    });
+    this.hiDraw(scene, 'fenceV', 12, 34, d => {
+      d.R(4, 0, 3, 34, W.m); d.R(7, 0, 2, 34, W.d);
+      [0, 16].forEach(y => { d.G([[3, y + 3], [6, y], [9, y + 3], [9, y + 14], [3, y + 14]], W.l); d.R(8, y + 3, 1, 11, W.d); });
+    });
+    this.hiDraw(scene, 'signpost', 24, 34, d => {
+      d.E(12, 31, 7, 2.2, 'rgba(20,24,30,0.25)');
+      d.R(10, 10, 4, 22, W.m); d.R(10, 10, 1, 22, W.l); d.R(13, 10, 1, 22, W.d);
+      d.G([[1, 2], [23, 3], [22, 14], [2, 13]], W.l); d.R(2, 3, 20, 1, W.h); d.R(2, 12, 20, 1, W.d);
+      d.R(5, 6, 12, 1, W.k); d.R(5, 9, 9, 1, W.k); d.R(3, 4, 1, 1, W.k); d.R(20, 5, 1, 1, W.k);
+    });
+  },
+
+  market(scene) {
+    const k = PALETTE.outline;
+    // Arka: tabela, tente, direkler
+    let { tex, ctx } = this.canvas(scene, 'marketBack', 80, 96);
+    const mp = (x, y, c, w = 1, h = 1) => this.px(ctx, x, y, c, w, h);
+    // Taş dükkân: kırmızı kiremit çatı, baca, ortada tezgâh açıklığı
+    this.chimney(ctx, 10, 20, 16);
+    mp(3, 56, k, 74, 40); this.stoneWall(ctx, 4, 57, 72, 39, ['#9aa8c4', '#6e7c98', '#c0cce0']);
+    // açıklık (içerisi karanlık, arkada raf ve asılı silahlar)
+    mp(11, 60, k, 58, 36); mp(12, 61, '#6a4226', 56, 35); mp(14, 63, '#2c2238', 52, 33);
+    mp(14, 70, '#4a3a50', 52, 2); mp(14, 72, '#1f1828', 52, 1);
+    [[17, '#dfeeff'], [22, '#8fe8d8'], [58, '#ff9a3a'], [63, '#dfeeff']].forEach(([x, c]) => { mp(x, 63, c, 1, 6); mp(x - 1, 68, '#ffcf4a', 3, 1); mp(x, 69, '#a06a34', 1, 1); });
+    mp(27, 63, k, 6, 7); mp(28, 64, '#3f82c8', 4, 5); mp(29, 66, '#ffcf4a', 2, 1);
+    mp(47, 63, k, 6, 7); mp(48, 64, '#c0503a', 4, 5); mp(49, 66, '#ffcf4a', 2, 1);
+    // ahşap lento ve kısa tente
+    mp(9, 57, k, 62, 5); mp(10, 58, '#8a5a34', 60, 3); mp(10, 58, '#b87c4a', 60, 1);
+    for (let i = 0; i < 10; i++) { const c = i % 2 ? '#fff4d6' : '#c0503a'; mp(10 + i * 6, 62, c, 6, 3); mp(11 + i * 6, 65, c, 4, 1); }
+    // duvar feneri ve arma
+    mp(5, 66, k, 5, 8); mp(6, 67, '#ffe98a', 3, 5); mp(6, 67, '#ffffff', 1, 1);
+    mp(70, 65, k, 6, 9); mp(71, 66, '#c0503a', 4, 6); mp(72, 67, '#ffcf4a', 2, 3);
+    // çatı
+    this.roofTrap(ctx, 1, 79, 24, 54, 11, ['#c8523c', '#9a3a2c', '#e8806a']);
+    ctx.save(); ctx.translate(0, 26);
+    // Tabela: SİLAH TÜCCARI (iki satır)
+    this.px(ctx, 21, 0, k, 38, 21); this.px(ctx, 22, 1, '#e6c486', 36, 19); this.px(ctx, 22, 1, '#f6dca0', 36, 1);
+    const glyphs = { S: ['XXX', 'X..', 'XXX', '..X', 'XXX'], I: ['X', 'X', 'X', 'X', 'X'], L: ['X..', 'X..', 'X..', 'X..', 'XXX'],
+                     A: ['.X.', 'X.X', 'XXX', 'X.X', 'X.X'], H: ['X.X', 'X.X', 'XXX', 'X.X', 'X.X'], T: ['XXX', '.X.', '.X.', '.X.', '.X.'],
+                     U: ['X.X', 'X.X', 'X.X', 'X.X', 'XXX'], C: ['XXX', 'X..', 'X..', 'X..', 'XXX'], R: ['XX.', 'X.X', 'XX.', 'X.X', 'X.X'] };
+    const ink = '#5a2c1a';
+    const line = (str, y) => {
+      const chars = Array.from(str).map(ch => ({ ch, g: glyphs[ch === 'İ' ? 'I' : ch === 'Ü' ? 'U' : ch] }));
+      let x = 40 - Math.floor((chars.reduce((w, c) => w + c.g[0].length + 1, 0) - 1) / 2);
+      chars.forEach(({ ch, g }) => {
+        this.drawMap(ctx, g, { X: ink }, x, y);
+        if (ch === 'İ') this.px(ctx, x, y - 2, ink);
+        if (ch === 'Ü') { this.px(ctx, x, y - 2, ink); this.px(ctx, x + 2, y - 2, ink); }
+        x += g[0].length + 1;
+      });
+    };
+    line('SİLAH', 4); line('TÜCCARI', 13);
+    ctx.restore();
+    // tabela askıları
+    mp(26, 22, k, 2, 5); mp(52, 22, k, 2, 5);
+    tex.refresh();
+    // Ön: tezgâh ve üstündeki mallar
+    ({ tex, ctx } = this.canvas(scene, 'marketFront', 80, 24));
+    this.px(ctx, 2, 6, k, 76, 18); this.px(ctx, 3, 7, '#dca868', 74, 6); this.px(ctx, 3, 7, '#f0c888', 74, 1);
+    this.px(ctx, 3, 13, '#a8713a', 74, 10); for (let x = 12; x < 76; x += 12) this.px(ctx, x, 13, '#8a5a2c', 1, 10);
+    // kılıç
+    this.px(ctx, 9, 0, k, 3, 10); this.px(ctx, 10, 1, '#dfeeff', 1, 8); this.px(ctx, 7, 9, k, 7, 3); this.px(ctx, 8, 10, '#ffcf4a', 5, 1);
+    // hançer
+    this.px(ctx, 19, 4, k, 3, 6); this.px(ctx, 20, 5, '#8fe8d8', 1, 4); this.px(ctx, 18, 9, k, 5, 3); this.px(ctx, 19, 10, '#ffffff', 3, 1);
+    // kalkan
+    this.px(ctx, 29, 1, k, 10, 10); this.px(ctx, 30, 2, '#3f82c8', 8, 8); this.px(ctx, 30, 2, '#74b0ea', 8, 1); this.px(ctx, 33, 5, '#ffcf4a', 2, 2);
+    // zırh
+    this.px(ctx, 45, 1, k, 12, 4); this.px(ctx, 47, 5, k, 8, 6); this.px(ctx, 46, 2, '#a8b8d0', 10, 2); this.px(ctx, 48, 4, '#a8b8d0', 6, 6);
+    this.px(ctx, 48, 4, '#d0dcec', 1, 5);
+    // iksirler
+    [[62, '#ff5a8a'], [68, '#5ad0ff'], [74, '#84d86c']].forEach(([x, c]) => {
+      this.px(ctx, x, 5, k, 5, 6); this.px(ctx, x + 1, 6, c, 3, 4); this.px(ctx, x + 1, 3, k, 3, 2); this.px(ctx, x + 2, 3, '#e6c486');
+    });
+    tex.refresh();
+  },
+
+  decor(scene) {
+    const P = PALETTE; let tex, ctx;
+    ({ tex, ctx } = this.canvas(scene, 'mushroom', 7, 7));
+    this.px(ctx, 2, 3, '#fff0d8', 3, 4);
+    this.px(ctx, 1, 0, '#e8443a', 5, 3); this.px(ctx, 0, 1, '#e8443a', 7, 2);
+    this.px(ctx, 2, 1, '#ffffff'); this.px(ctx, 5, 2, '#ffffff');
+    tex.refresh();
+
+    // Kelebek (2 kare: kanat açık / kapalı) — beyaz çizilir, oyunda renklendirilir
+    ({ tex, ctx } = this.canvas(scene, 'bfly', 14, 5));
+    this.px(ctx, 0, 0, '#ffffff', 3, 4); this.px(ctx, 4, 0, '#ffffff', 3, 4); this.px(ctx, 3, 1, '#3a3040', 1, 4);
+    this.px(ctx, 9, 0, '#ffffff', 1, 4); this.px(ctx, 11, 0, '#ffffff', 1, 4); this.px(ctx, 10, 1, '#3a3040', 1, 4);
+    tex.refresh(); tex.add(0, 0, 0, 0, 7, 5); tex.add(1, 0, 7, 0, 7, 5);
+
+    // Uğur böceği
+    ({ tex, ctx } = this.canvas(scene, 'bug', 4, 3));
+    this.px(ctx, 0, 0, '#e8343a', 3, 3); this.px(ctx, 3, 1, '#1a1020'); this.px(ctx, 1, 1, '#1a1020');
+    tex.refresh();
+  },
+
+  // Ortaçağ tarzı bina parçaları: kiremit/pul çatı, taş duvar, ahşap iskelet
+  roofTrap(ctx, x0, x1, yTop, yBot, inset, cols) {
+    const k = PALETTE.outline, H = yBot - yTop;
+    for (let y = yTop; y <= yBot; y++) {
+      const off = Math.round(inset * (1 - (y - yTop) / H)), a = x0 + off, w = x1 - x0 - 2 * off, sub = (y - yTop) % 4, band = Math.floor((y - yTop) / 4);
+      this.px(ctx, a, y, sub === 3 ? cols[1] : cols[0], w, 1);
+      if (sub === 0 && band > 0) this.px(ctx, a, y, cols[2], w, 1);
+      if (sub === 1 || sub === 2) for (let x = a + (band % 2 ? 2 : 5); x < a + w - 1; x += 6) this.px(ctx, x, y, cols[1]);
+      this.px(ctx, a - 1, y, k); this.px(ctx, a + w, y, k);
+    }
+    this.px(ctx, x0 + inset - 1, yTop - 2, k, x1 - x0 - 2 * inset + 2, 2); this.px(ctx, x0 + inset, yTop - 1, cols[2], x1 - x0 - 2 * inset, 1);
+    this.px(ctx, x0 - 1, yBot + 1, k, x1 - x0 + 2, 2); this.px(ctx, x0, yBot + 1, cols[1], x1 - x0, 1);
+  },
+  stoneWall(ctx, x, y, w, h, cols) {
+    this.px(ctx, x, y, cols[0], w, h);
+    for (let yy = y, row = 0; yy < y + h; yy += 5, row++) {
+      this.px(ctx, x, yy + 4, cols[1], w, 1);
+      for (let xx = x + (row % 2 ? 4 : 0); xx < x + w; xx += 9) { this.px(ctx, xx, yy, cols[1], 1, 4); if (xx + 1 < x + w) this.px(ctx, xx + 1, yy, cols[2], Math.min(7, x + w - xx - 1), 1); }
+    }
+  },
+  chimney(ctx, x, y, h) {
+    const k = PALETTE.outline;
+    this.px(ctx, x, y, k, 9, h); this.stoneWall(ctx, x + 1, y + 2, 7, h - 2, ['#a49cb0', '#7c7488', '#c8c0d0']);
+    this.px(ctx, x - 1, y, k, 11, 3); this.px(ctx, x, y + 1, '#c8c0d0', 9, 1);
+  },
+  window(ctx, x, y, shutter) {
+    const k = PALETTE.outline;
+    this.px(ctx, x - 4, y, k, 19, 12); this.px(ctx, x - 3, y + 1, shutter, 3, 10); this.px(ctx, x + 11, y + 1, shutter, 3, 10);
+    this.px(ctx, x - 3, y + 4, k, 3, 1); this.px(ctx, x + 11, y + 4, k, 3, 1); this.px(ctx, x - 3, y + 8, k, 3, 1); this.px(ctx, x + 11, y + 8, k, 3, 1);
+    this.px(ctx, x, y, k, 11, 12); this.px(ctx, x + 1, y + 1, '#6a4226', 9, 10);
+    this.px(ctx, x + 2, y + 2, '#bfeaff', 7, 8); this.px(ctx, x + 2, y + 6, '#8fd0f4', 7, 4); this.px(ctx, x + 3, y + 3, '#ffffff', 2, 1);
+    this.px(ctx, x + 5, y + 2, '#6a4226', 1, 8); this.px(ctx, x + 2, y + 5, '#6a4226', 7, 1);
+    // çiçeklik
+    this.px(ctx, x - 1, y + 12, k, 13, 4); this.px(ctx, x, y + 13, '#8a5a34', 11, 2);
+    this.px(ctx, x, y + 11, PALETTE.leafMid, 11, 2); this.px(ctx, x + 1, y + 10, '#ff5a5a', 2, 2); this.px(ctx, x + 5, y + 10, '#ffd84a', 2, 2); this.px(ctx, x + 8, y + 10, '#ff8ab8', 2, 2);
+  },
+  door(ctx, x, y) {
+    const k = PALETTE.outline;
+    this.px(ctx, x - 1, y + 2, k, 14, 21); this.px(ctx, x, y + 1, k, 12, 1); this.px(ctx, x + 1, y, k, 10, 1);
+    this.px(ctx, x, y + 3, '#9a6238', 12, 20); this.px(ctx, x + 1, y + 1, '#9a6238', 10, 2); this.px(ctx, x + 1, y + 1, '#b87c4a', 10, 1);
+    this.px(ctx, x + 4, y + 1, '#6a4226', 1, 22); this.px(ctx, x + 8, y + 1, '#6a4226', 1, 22);
+    this.px(ctx, x, y + 6, '#3a3040', 4, 1); this.px(ctx, x, y + 17, '#3a3040', 4, 1); this.px(ctx, x + 9, y + 12, '#ffcf4a', 2, 2);
+    this.px(ctx, x - 3, y + 23, k, 18, 3); this.px(ctx, x - 2, y + 23, '#c8c0d0', 16, 1); this.px(ctx, x - 2, y + 24, '#a49cb0', 16, 1);
+  },
+
+  // Ortaçağ evi: dik pul çatı, alınlık, baca, ahşap iskeletli ya da taş duvar
+  house(scene) {
+    const k = PALETTE.outline;
+    const make = (key, o) => {
+      const W = 72, { tex, ctx } = this.canvas(scene, key, W, 80);
+      const px = (x, y, c, w = 1, h = 1) => this.px(ctx, x, y, c, w, h);
+      this.chimney(ctx, 50, 0, 18);
+      // duvar
+      px(5, 44, k, 62, 30);
+      if (o.stone) this.stoneWall(ctx, 6, 45, 60, 28, o.wall);
+      else {
+        px(6, 45, o.wall[0], 60, 28);
+        for (let i = 0; i < 26; i++) px(7 + (i * 37) % 58, 47 + (i * 13) % 25, o.wall[1], 2, 1);
+        // ahşap iskelet
+        [6, 24, 46, 64].forEach(x => px(x, 45, o.timber, 2, 28));
+        px(6, 45, o.timber, 60, 2); px(6, 68, o.timber, 60, 2);
+        for (let i = 0; i < 6; i++) { px(8 + i, 67 - i, o.timber, 2, 1); px(62 - i, 67 - i, o.timber, 2, 1); }
+      }
+      px(6, 47, 'rgba(20,16,30,0.22)', 60, 2); // saçak gölgesi
+      // taş temel
+      px(4, 73, k, 64, 7); this.stoneWall(ctx, 5, 74, 62, 5, ['#9692a4', '#6c6878', '#b8b4c4']);
+      this.window(ctx, 11, 51, o.shutter); this.window(ctx, 50, 51, o.shutter);
+      this.door(ctx, 30, 54);
+      // kapı feneri
+      px(45, 55, k, 4, 6); px(46, 56, '#ffe98a', 2, 4); px(46, 56, '#ffffff', 1, 1);
+      // çatı ve kapı üstü alınlık
+      this.roofTrap(ctx, 1, 71, 10, 43, 10, o.roof);
+      for (let y = 24; y <= 46; y++) {
+        const h = Math.round((y - 24) * 14 / 22);
+        px(36 - h - 1, y, k, 2 * h + 2, 1);
+        if (h > 0) px(36 - h, y, y % 4 === 3 ? o.roof[1] : o.roof[0], 2 * h, 1);
+        if (h > 3) px(36 - h + 3, y, o.stone ? o.wall[0] : o.wall[0], 2 * h - 6, 1);
+      }
+      for (let i = 0; i < 12; i++) { px(36 - 11 + i - 1, 46 - i, o.timber, 2, 1); px(36 + 11 - i - 1, 46 - i, o.timber, 2, 1); }
+      px(33, 37, k, 6, 6); px(34, 38, '#bfeaff', 4, 4); px(36, 38, o.timber, 1, 4); px(34, 40, o.timber, 4, 1);
+      px(21, 46, k, 30, 2); px(22, 46, o.timber, 28, 1);
+      tex.refresh();
+    };
+    make('houseA', { roof: ['#c08a42', '#94622a', '#e0b060'], wall: ['#f4e4bc', '#dcc898'], timber: '#6a4226', shutter: '#3fae5a' });
+    make('houseB', { roof: ['#4f86bc', '#386698', '#86b4dc'], wall: ['#f2f2ee', '#d4d8dc'], timber: '#5a4030', shutter: '#e0a030' });
+    make('houseC', { roof: ['#8a6444', '#64442c', '#b08a62'], wall: ['#b8b4c4', '#8a8698', '#d4d0dc'], timber: '#5a4030', shutter: '#c0503a', stone: true });
+  }
+};
+
+/* ---------- Harita ---------- */
+const WorldGen = {
+  build() {
+    const { cols, rows } = CONFIG, T = CONFIG.tile, r = Art.rng(2026);
+    const data = Array.from({ length: rows }, () => Array.from({ length: cols }, () => { const v = r(); return v < 0.68 ? 0 : v < 0.87 ? 1 : 2; }));
+    const rect = (c0, r0, c1, r1, t) => { for (let y = r0; y <= r1; y++) for (let x = c0; x <= c1; x++) data[y][x] = t; };
+    // Yollar, meydan, tarla
+    rect(2, 21, cols - 3, 22, 3);
+    rect(19, 12, 20, 40, 3);
+    rect(44, 22, 45, 36, 3);
+    rect(26, 17, 37, 26, 5);
+    rect(6, 28, 14, 33, 7);
+    rect(54, 18, 60, 20, 5);  // silah tüccarının önü
+    rect(15, 30, 18, 31, 3);  // tarla yolu
+    rect(31, 36, 43, 37, 3);  // güney evi yolu
+    rect(46, 30, 51, 30, 3);  // doğu evi yolu
+    // Göletler
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const a = (x - 48) / 6.5, b = (y - 10) / 3.6, c = (x - 52) / 4, d = (y - 34) / 2.6;
+      if (a * a + b * b <= 1 || c * c + d * d <= 1) data[y][x] = 4;
+    }
+    const lilies = [];
+    for (let y = 2; y < rows - 2; y++) for (let x = 2; x < cols - 2; x++)
+      if (data[y][x] === 4 && data[y - 1][x] === 4 && r() < 0.16) lilies.push({ x: x * T + 4 + Math.floor(r() * 8), y: y * T + 4 + Math.floor(r() * 8) });
+    for (let y = 1; y < rows; y++) for (let x = 0; x < cols; x++)
+      if (data[y][x] === 4 && data[y - 1][x] !== 4 && data[y - 1][x] !== 8) data[y][x] = 8;
+    // Çevre duvarı
+    rect(0, 0, cols - 1, 1, 6); rect(0, rows - 2, cols - 1, rows - 1, 6);
+    rect(0, 0, 1, rows - 1, 6); rect(cols - 2, 0, cols - 1, rows - 1, 6);
+
+    // Sabit yerleşimler
+    const house = { x: 20 * T, y: 12 * T }, house2 = { x: 36 * T, y: 35 * T }, house3 = { x: 50 * T, y: 30 * T };
+    const merchant = { x: 57 * T + 8, y: 20 * T + 12 }, portal = { x: 32 * T, y: 22 * T }, dummy = { x: 27 * T + 8, y: 12 * T };
+    const decor = [];
+    const put = (kind, x, y) => decor.push({ kind, x, y });
+    // Meydan: fenerler, banklar, çiçeklikler
+    [[424, 292], [600, 292], [424, 430], [600, 430]].forEach(([x, y]) => put('lamp', x, y));
+    [[468, 290], [556, 290], [468, 431], [556, 431]].forEach(([x, y]) => put('bench', x, y));
+    [[430, 322], [430, 394], [594, 322], [594, 394], [512, 290], [512, 431]].forEach(([x, y]) => put('planter', x, y));
+    // Yol boyu fenerler ve tabelalar
+    [6, 12, 23, 41, 49].forEach(c => put('lamp', c * T + 8, 21 * T - 2));
+    [10, 17, 24, 40, 50, 58].forEach(c => put('lamp', c * T + 8, 23 * T + 12));
+    put('signpost', 21 * T + 8, 21 * T - 2); put('signpost', 46 * T + 8, 23 * T + 12); put('signpost', 21 * T + 6, 30 * T);
+    // Tüccarın yanı
+    put('barrel', merchant.x - 49, merchant.y); put('barrel', merchant.x - 49, merchant.y - 9); put('crate', merchant.x + 49, merchant.y); put('crate', merchant.x + 47, merchant.y - 11);
+    // Ev: kuyu, odun, fıçı
+    put('well', 24 * T + 8, 16 * T); put('logs', 16 * T, 13 * T + 4); put('barrel', 23 * T + 6, 12 * T + 2); put('stump', 15 * T, 15 * T);
+    // Güney evi
+    put('crate', house2.x - 40, house2.y + 2); put('logs', house2.x + 44, house2.y + 2); put('planter', house2.x - 22, house2.y + 12); put('planter', house2.x + 22, house2.y + 12);
+    // Doğu evi
+    put('barrel', house3.x + 42, house3.y + 1); put('stump', house3.x - 44, house3.y + 2); put('logs', house3.x - 46, house3.y - 14);
+    // Tarla: çit, filizler, balkabakları
+    for (let c = 6; c <= 14; c++) { put('fenceH', c * T + 8, 28 * T - 1); put('fenceH', c * T + 8, 34 * T + 8); }
+    for (let rw = 28; rw <= 33; rw++) { put('fenceV', 6 * T - 3, rw * T + 16); if (rw < 30 || rw > 31) put('fenceV', 15 * T + 3, rw * T + 16); }
+    for (let rw = 28; rw <= 33; rw++) for (let c = 6; c <= 14; c++)
+      put(r() < 0.12 ? 'pumpkin' : 'sprout', c * T + 8, rw * T + 12);
+    // Kamp alanı
+    put('tent', 7 * T, 8 * T); put('tent', 10 * T + 8, 7 * T); put('fire', 9 * T, 9 * T + 8); put('logs', 6 * T + 8, 10 * T); put('stump', 11 * T + 8, 10 * T);
+    // Gölet kenarı
+    put('bench', 44 * T, 15 * T + 4); put('barrel', 56 * T, 12 * T); put('signpost', 42 * T, 14 * T);
+
+    // Rastgele nesneler (sadece boş çimene)
+    const reserved = [[15, 6, 24, 13], [52, 14, 61, 20], [25, 9, 30, 13], [22, 14, 26, 17], [31, 29, 41, 37], [4, 4, 13, 11], [4, 26, 17, 35], [40, 13, 46, 16], [25, 16, 38, 28], [46, 24, 54, 31]];
+    const used = new Set();
+    decor.forEach(d => used.add(Math.floor(d.x / T) + ',' + Math.floor((d.y - 2) / T)));
+    const free = (c, rw) => rw > 2 && rw < rows - 2 && c > 2 && c < cols - 3 && data[rw][c] < 3 && !used.has(c + ',' + rw) &&
+      !reserved.some(([a, b, c2, d]) => c >= a && c <= c2 && rw >= b && rw <= d);
+    const objects = [];
+    const scatter = (kind, count, spread) => {
+      for (let i = 0, tries = 0; i < count && tries < count * 30; tries++) {
+        const c = 2 + Math.floor(r() * (cols - 4)), rw = 3 + Math.floor(r() * (rows - 5));
+        if (!free(c, rw) || (spread && (used.has((c - 1) + ',' + rw) || used.has((c + 1) + ',' + rw) || used.has(c + ',' + (rw - 1)) || used.has(c + ',' + (rw + 1)) || data[rw + 1][c] >= 3))) continue;
+        for (let dy = -spread; dy <= spread; dy++) for (let dx = -spread; dx <= spread; dx++) used.add((c + dx) + ',' + (rw + dy));
+        objects.push({ kind, x: c * T + 8, y: rw * T + 14 });
+        i++;
+      }
+    };
+    scatter('tree', 90, 1); scatter('rock', 32, 0); scatter('bush', 48, 0); scatter('stump', 10, 0); scatter('logs', 6, 0);
+    // Çeşitlilik: ağaçların bir kısmı çam; kaya ve tomruklar farklı biçimlerde (konuma göre sabit seçilir)
+    objects.forEach(o => {
+      const hsh = Math.floor(o.x / T) * 7 + Math.floor(o.y / T) * 13;
+      if (o.kind === 'tree' && hsh % 5 < 2) o.kind = 'pine';
+      if (o.kind === 'rock') o.f = hsh % 4;
+      if (o.kind === 'logs') o.f = hsh % 2;
+    });
+    decor.forEach(o => { if (o.kind === 'logs') o.f = 0; });
+    const flowers = [], tufts = [];
+    for (let i = 0; i < 400; i++) {
+      const c = 2 + Math.floor(r() * (cols - 4)), rw = 2 + Math.floor(r() * (rows - 4));
+      if (data[rw][c] < 3) flowers.push({ x: c * T + 2 + Math.floor(r() * 12), y: rw * T + 5 + Math.floor(r() * 11),
+        f: r() < 0.1 ? -1 : Math.floor(r() * 6) });
+    }
+    for (let i = 0; i < 300; i++) {
+      const c = 2 + Math.floor(r() * (cols - 4)), rw = 2 + Math.floor(r() * (rows - 4));
+      if (data[rw][c] < 3) tufts.push({ x: c * T + 2 + Math.floor(r() * 12), y: rw * T + 5 + Math.floor(r() * 11) });
+    }
+    return { data, objects, flowers, tufts, lilies, decor, house, house2, house3, merchant, portal, dummy };
+  }
+};
+
+/* ---------- Kontroller: yüzen sanal kol + klavye ---------- */
+const Controls = {
+  x: 0, y: 0, pid: null, ox: 0, oy: 0, max: 44,
+  init() {
+    this.watchTaps(document.getElementById('stickZone')); this.watchTaps(document.getElementById('tapZone'));
+    const zone = document.getElementById('stickZone'), stick = document.getElementById('stick'), knob = document.getElementById('knob');
+    const reset = () => {
+      this.pid = null; this.x = this.y = 0;
+      // Kol olduğu yerde kalır ve yavaşça görünmez olur (konumu sıfırlanmaz, kenara kaymaz)
+      stick.classList.remove('active');
+    };
+    zone.addEventListener('pointerdown', e => {
+      if (this.pid !== null) return;
+      e.preventDefault(); this.pid = e.pointerId; zone.setPointerCapture?.(e.pointerId);
+      const p = Screen.toLocal(e); this.ox = p.x; this.oy = p.y;
+      knob.style.transform = '';
+      stick.style.left = p.x + 'px'; stick.style.top = p.y + 'px'; stick.classList.add('active');
+    });
+    zone.addEventListener('pointermove', e => {
+      if (e.pointerId !== this.pid) return;
+      const p = Screen.toLocal(e);
+      let dx = p.x - this.ox, dy = p.y - this.oy;
+      const len = Math.hypot(dx, dy);
+      if (len > this.max) { dx = dx / len * this.max; dy = dy / len * this.max; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      this.x = Math.abs(dx) < 8 ? 0 : dx / this.max;
+      this.y = Math.abs(dy) < 8 ? 0 : dy / this.max;
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
+      zone.addEventListener(ev, e => { if (e.pointerId === this.pid) reset(); }));
+    zone.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Saldırı ve savunma tuşları
+    document.querySelectorAll('.act').forEach(btn => {
+      const act = btn.dataset.act;
+      const down = e => {
+        e.preventDefault(); btn.setPointerCapture?.(e.pointerId); btn.classList.add('on');
+        if (act === 'atk') { this.atkQueued = true; this.atkHeld = true; } else if (act === 'dash') this.dashQueued = true; else this.guard = true;
+      };
+      const up = e => { e.preventDefault(); btn.classList.remove('on'); if (act === 'guard') this.guard = false; if (act === 'atk') this.atkHeld = false; };
+      btn.addEventListener('pointerdown', down);
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, up));
+      btn.addEventListener('contextmenu', e => e.preventDefault());
+    });
+  },
+  guard: false, atkQueued: false, atkHeld: false, tap: null,
+  consumeAtk() { const a = this.atkQueued; this.atkQueued = false; return a; },
+  consumeTap() { const t = this.tap; this.tap = null; return t; },
+  // Kısa dokunuşları yakalar (NPC'ye dokunmak için)
+  watchTaps(el) {
+    const downs = {};
+    el.addEventListener('pointerdown', e => { downs[e.pointerId] = { p: Screen.toLocal(e), t: performance.now() }; });
+    el.addEventListener('pointerup', e => {
+      const d = downs[e.pointerId]; delete downs[e.pointerId];
+      if (!d) return;
+      const p = Screen.toLocal(e);
+      if (performance.now() - d.t < 350 && Math.hypot(p.x - d.p.x, p.y - d.p.y) < 12) this.tap = p;
+    });
+  },
+  dashQueued: false,
+  consumeDash() { const a = this.dashQueued; this.dashQueued = false; return a; },
+  release() { this.x = this.y = 0; this.guard = false; this.atkQueued = false; this.atkHeld = false; this.dashQueued = false; this.tap = null; }
+};
+
+/* ---------- Market ---------- */
+const Shop = {
+  open: false, tab: 'blade', scene: null, icons: {},
+  tabs: [['blade', 'Yakın'], ['pole', 'Uzun saplı'], ['range', 'Zincir ve yay'], ['shield', 'Kalkan'], ['armor', 'Zırh']],
+  init(scene) {
+    this.scene = scene;
+    Object.keys(ITEMS).forEach(id => { this.icons[id] = scene.textures.get('it_' + id).getSourceImage().toDataURL(); });
+    document.getElementById('shopClose').addEventListener('click', () => this.hide());
+    const tabs = document.getElementById('shopTabs');
+    this.tabs.forEach(([key, label]) => {
+      const b = document.createElement('button'); b.textContent = label; b.dataset.tab = key;
+      b.addEventListener('click', () => { this.tab = key; this.msg(''); this.render(); });
+      tabs.appendChild(b);
+    });
+  },
+  show() { this.open = true; Controls.release(); this.msg(''); this.render(); document.getElementById('shop').classList.add('open'); },
+  hide() { this.open = false; Controls.release(); document.getElementById('shop').classList.remove('open'); },
+  msg(t) { document.getElementById('shopMsg').textContent = t; },
+  slot(it) { return it.type === 'shield' ? 'shield' : it.type === 'armor' ? 'armor' : 'weapon'; },
+  stat(it) {
+    if (it.type === 'shield') return 'Siper ' + it.guard;
+    if (it.type === 'armor') return 'Gelen hasar -' + it.def;
+    return 'Sv. 1 · Hasar ' + it.dmg[0] + '-' + it.dmg[1] + ', siper ' + it.guard;
+  },
+  render() {
+    const P = PlayerData;
+    document.getElementById('shopGold').textContent = P.gold;
+    document.querySelectorAll('#shopTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === this.tab));
+    const grid = document.getElementById('shopGrid'); grid.textContent = '';
+    Object.entries(ITEMS).filter(([, it]) => it.tab === this.tab).forEach(([id, it]) => {
+      const owned = P.owned.includes(id), worn = P.equipped[this.slot(it)] === id;
+      const card = document.createElement('div'); card.className = 'item' + (worn ? ' equipped' : '');
+      const img = document.createElement('img'); img.src = this.icons[id]; img.alt = '';
+      const name = document.createElement('div'); name.className = 'name'; name.textContent = it.name;
+      const stat = document.createElement('div'); stat.className = 'stat'; stat.textContent = this.stat(it);
+      const price = document.createElement('div'); price.className = 'price';
+      price.textContent = owned ? 'Sende var' : it.price ? it.price + ' altın' : 'Ücretsiz';
+      const btn = document.createElement('button');
+      if (worn) { btn.textContent = this.slot(it) === 'weapon' ? 'Kuşanıldı' : 'Çıkar'; btn.className = 'worn'; }
+      else if (owned) { btn.textContent = 'Kuşan'; btn.className = 'owned'; }
+      else { btn.textContent = 'Satın al'; if (P.gold < it.price) btn.className = 'poor'; }
+      btn.addEventListener('click', () => this.act(id));
+      card.append(img, name, stat, price, btn); grid.appendChild(card);
+    });
+  },
+  act(id) {
+    const P = PlayerData, it = ITEMS[id], slot = this.slot(it);
+    if (!P.owned.includes(id)) {
+      if (P.gold < it.price) { this.msg('Altının yetmiyor. ' + (it.price - P.gold) + ' altın daha lazım.'); return; }
+      P.gold -= it.price; P.owned.push(id); P.equipped[slot] = id; this.msg(it.name + ' satın alındı ve kuşanıldı.');
+    } else if (P.equipped[slot] === id) {
+      if (slot === 'weapon') return;
+      P.equipped[slot] = null; this.msg(it.name + ' çıkarıldı.');
+    } else { P.equipped[slot] = id; this.msg(it.name + ' kuşanıldı.'); }
+    this.scene.applyEquip(); this.scene.saveGame(); this.render();
+  }
+};
+
+/* ---------- Avatar seçimi ---------- */
+const AvatarUI = {
+  open: false, scene: null,
+  init(scene) {
+    this.scene = scene;
+    const grid = document.getElementById('avatarGrid');
+    AVATARS.forEach(a => {
+      const b = document.createElement('button'); b.className = 'avatar'; b.dataset.id = a.id;
+      const img = document.createElement('img'); img.src = Art.portrait(a.id); img.alt = '';
+      b.append(img, document.createTextNode(a.name));
+      b.addEventListener('click', () => { PlayerData.avatar = a.id; scene.applyEquip(); scene.saveGame(); this.render(); });
+      grid.appendChild(b);
+    });
+    document.getElementById('btnAvatar').addEventListener('click', () => this.show());
+    document.getElementById('avatarClose').addEventListener('click', () => this.hide());
+  },
+  render() { document.querySelectorAll('.avatar').forEach(b => b.classList.toggle('on', b.dataset.id === PlayerData.avatar)); },
+  show() { if (Shop.open) return; this.open = true; Controls.release(); this.render(); document.getElementById('avatars').classList.add('open'); },
+  hide() { this.open = false; Controls.release(); document.getElementById('avatars').classList.remove('open'); }
+};
+
+/* ---------- Oyun sahnesi ---------- */
+class WorldScene extends Phaser.Scene {
+  constructor() { super('World'); }
+
+  create() {
+    Art.build(this);
+    // Yüksek yoğunluklu dokular yarı ölçekte gösterilir
+    const addImage = this.add.image;
+    this.add.image = (x, y, key, frame) => { const o = addImage.call(this.add, x, y, key, frame); if (Art.hi.has(key)) o.setScale(Art.scales[key] || 0.5); return o; };
+    const T = CONFIG.tile, world = WorldGen.build();
+    const worldW = CONFIG.cols * T, worldH = CONFIG.rows * T;
+
+    // Zemin
+    const map = this.make.tilemap({ data: world.data, tileWidth: T, tileHeight: T });
+    const tileset = map.addTilesetImage('tiles', 'tiles', T, T, 0, 0);
+    this.layer = map.createLayer(0, tileset, 0, 0).setVisible(false); // sadece çarpışma için
+    this.layer.setCollision([4, 6, 8]);
+    // Görünen zemin: 32 piksellik karolar, yarı ölçekte
+    const toHi = (t, x, y) => t < 3 ? ((x * 7 + y * 13 + (x * y) % 5) % 4) : [4, 5, 6, 7, 8, 9][t - 3];
+    const hiData = world.data.map((row, y) => row.map((t, x) => toHi(t, x, y)));
+    const mapHi = this.make.tilemap({ data: hiData, tileWidth: 32, tileHeight: 32 });
+    mapHi.createLayer(0, mapHi.addTilesetImage('tilesHi', 'tilesHi', 32, 32, 0, 0), 0, 0).setScale(0.5).setDepth(-1000);
+    // Yol kenarlarına ot öbekleri: yol ile çimen arası keskin çizgi yumuşar
+    const er = Art.rng(808);
+    for (let y = 2; y < CONFIG.rows - 2; y++) for (let x = 2; x < CONFIG.cols - 2; x++) {
+      if (world.data[y][x] !== 3) continue;
+      [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+        if (world.data[y + dy][x + dx] >= 3) return;
+        for (let i = 0; i < 2; i++) {
+          const ex = x * T + (dx ? (dx > 0 ? 15 : 1) : 2 + er() * 12), ey = y * T + (dy ? (dy > 0 ? 17 : 3) : 4 + er() * 12);
+          this.add.image(ex, ey, 'tuft').setOrigin(0.5, 1).setDepth(-990);
+        }
+      });
+    }
+
+    // Süsler ve engeller (derinlik = ayak hizası, böylece karakter arkasından geçebilir)
+    this.solids = this.physics.add.staticGroup();
+    const solid = (x, y, w, h) => { const z = this.add.zone(x, y, w, h); this.physics.add.existing(z, true); this.solids.add(z); };
+    world.flowers.forEach(f => (f.f < 0 ? this.add.image(f.x, f.y, 'mushroom') : this.add.image(f.x, f.y, 'flower', f.f)).setOrigin(0.5, 1).setDepth(-500));
+
+    // Kelebekler ve uğur böcekleri (sadece süs)
+    this.critters = [];
+    const cr = Art.rng(77), tints = [0xffe14a, 0xffffff, 0xff9a3a, 0x7ad0ff, 0xff8ab8];
+    for (let i = 0; i < 26; i++) {
+      const fl = world.flowers[Math.floor(cr() * world.flowers.length)], fly = i < 18;
+      const img = fly ? this.add.image(fl.x, fl.y - 8, 'bfly', 0).setTint(tints[i % tints.length]).setDepth(90000)
+                      : this.add.image(fl.x, fl.y, 'bug').setDepth(-450);
+      this.critters.push({ img, fly, hx: fl.x, hy: fl.y - (fly ? 8 : 0), a: cr() * 6.28, speed: fly ? 14 : 3, flap: cr() * 200 });
+    }
+    world.tufts.forEach(t => this.add.image(t.x, t.y, 'tuft').setOrigin(0.5, 1).setDepth(-520));
+    world.lilies.forEach(l => this.add.image(l.x, l.y, 'lily').setDepth(-900));
+
+    // Nesneler: [çarpışma genişliği, yüksekliği, tabandan yukarı kayma, sallanma açısı]
+    const KIND = { tree: [10, 8, 5, 2.5], pine: [8, 7, 4, 2], rock: [14, 7, 4, 0], bush: [14, 6, 3, 4], lamp: [5, 4, 2, 1.5], bench: [20, 6, 4, 0], planter: [16, 8, 5, 0],
+      barrel: [10, 6, 3, 0], crate: [12, 7, 4, 0], well: [16, 10, 6, 0], stump: [10, 5, 3, 0], logs: [16, 6, 3, 0], fenceH: [16, 4, 3, 0],
+      fenceV: [4, 16, 8, 0], signpost: [4, 3, 2, 3], tent: [24, 12, 7, 1], fire: [8, 4, 2, 0] };
+    this.props = []; this.trees = [];
+    const addProp = (kind, x, y, f) => {
+      const img = this.add.image(x, y, kind, kind === 'fire' ? 0 : f).setOrigin(0.5, 1).setDepth(y);
+      const K = KIND[kind];
+      if (!K) { img.setDepth(y - 6); return img; } // filiz, balkabağı: üstünden yürünür
+      solid(x, y - K[2], K[0], K[1]);
+      const o = { kind, img, x, y, sway: K[3], tree: kind === 'tree' || kind === 'pine', mid: kind === 'tree' || kind === 'pine' ? 8 : Math.min(8, img.displayHeight / 2) };
+      this.props.push(o); if (o.tree) this.trees.push(o);
+      if (kind === 'lamp') this.tweens.add({ targets: this.add.image(x, y - 18, 'glow').setDepth(y + 1).setScale(1.5), alpha: 0.55, scale: 1.7, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      if (kind === 'fire') {
+        this.time.addEvent({ delay: 160, loop: true, callback: () => img.setFrame(img.frame.name ? 0 : 1) });
+        this.tweens.add({ targets: this.add.image(x, y - 6, 'glow').setDepth(y + 1).setScale(1.6), alpha: 0.5, duration: 300, yoyo: true, repeat: -1 });
+      }
+      return img;
+    };
+    world.objects.forEach(o => addProp(o.kind, o.x, o.y, o.f));
+    world.decor.forEach(o => addProp(o.kind, o.x, o.y, o.f));
+    [[world.house, 'houseA'], [world.house2, 'houseB'], [world.house3, 'houseC']].forEach(([h, key]) => {
+      this.add.image(h.x, h.y, key).setOrigin(0.5, 1).setDepth(h.y);
+      solid(h.x, h.y - 16, 62, 32);
+    });
+
+    // Meydanın ortasındaki portal (ileride diğer dünyalara geçiş)
+    const po = world.portal;
+    this.add.image(po.x, po.y, 'portalBase').setDepth(-800);
+    const glow = this.add.image(po.x, po.y, 'portalGlow').setDepth(-799);
+    this.tweens.add({ targets: glow, scale: 0.9, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: this.add.image(po.x, po.y, 'portalSwirl').setDepth(-798), angle: 360, duration: 5000, repeat: -1 });
+    this.time.addEvent({ delay: 230, loop: true, callback: () => {
+      const a = Math.random() * 6.28, d = Math.random() * 15, x = po.x + Math.cos(a) * d, y = po.y + Math.sin(a) * d;
+      const o = this.add.image(x, y, 'dot').setTint(Math.random() < 0.5 ? 0xd09cff : 0xff9ae8).setDepth(y + 4);
+      this.tweens.add({ targets: o, y: y - 16, alpha: 0, duration: 900, onComplete: () => o.destroy() });
+    } });
+    this.portal = { x: po.x, y: po.y };
+
+    // Oyuncu
+    const saved = SaveService.load();
+    if (saved?.player) {
+      PlayerData.gold = saved.player.gold ?? PlayerData.gold;
+      PlayerData.owned = (saved.player.owned || PlayerData.owned).filter(id => ITEMS[id]);
+      Object.assign(PlayerData.equipped, saved.player.equipped || {});
+      if (AVATARS.some(a => a.id === saved.player.avatar)) PlayerData.avatar = saved.player.avatar;
+      PlayerData.element = ELEMENTS[saved.player.element] ? saved.player.element : null;
+      // Eski kayıtlardaki kaldırılmış silahlar ayıklanır; başlangıç kılıcı herkeste bulunur
+      if (!PlayerData.owned.includes('sword_basic')) PlayerData.owned.unshift('sword_basic');
+      if (!ITEMS[PlayerData.equipped.weapon] || !PlayerData.owned.includes(PlayerData.equipped.weapon)) PlayerData.equipped.weapon = 'sword_basic';
+      if (!ITEMS[PlayerData.equipped.shield]) PlayerData.equipped.shield = null;
+      if (!ITEMS[PlayerData.equipped.armor]) PlayerData.equipped.armor = null;
+      if (saved.player.weaponLevel) PlayerData.weaponLevel = saved.player.weaponLevel;
+    }
+    const keepPos = saved?.v === 5; // harita değişti: eski kayıtlı konum kullanılmaz
+    const sx = keepPos ? saved.x : 32 * T, sy = keepPos ? saved.y : 25 * T + 8;
+    this.shadow = this.add.image(sx, sy, 'shadow').setDepth(-400).setScale(1.1);
+    this.player = this.physics.add.sprite(sx, sy, 'hero', 0).setOrigin(0.5, 1).setScale(3 / 8); // boy: ağaç ve oturaklarla orantılı
+    this.player.body.setSize(27, 16).setOffset(10.5, 46);
+    this.player.setCollideWorldBounds(true);
+    this.physics.add.collider(this.player, this.layer);
+    this.physics.add.collider(this.player, this.solids);
+    this.facing = 'down';
+    this.dir = { x: 0, y: 1 };
+    this.stats = { hp: COMBAT.hpMax, guard: guardInfo().max, guardBroken: false, lastGuardHit: -9999,
+      energy: COMBAT.energy.max, lastDash: -9999, poise: COMBAT.poise.max, lastPoiseHit: -9999, exposedUntil: 0 };
+    this.dashUntil = 0; this.dashDir = { x: 0, y: 1 }; this.stepAt = 0; this.hurtFlashUntil = 0; this.dead = false;
+    this.dizzy = this.add.image(sx, sy, 'spark').setTint(0xff9a3a).setVisible(false);
+    this.barG = this.add.graphics().setDepth(95000);
+    this.arm = this.add.image(sx, sy, 'heroArm').setOrigin(3 / 26, 0.5);   // omuz etrafında dönen silah kolu
+    this.nock = this.add.image(sx, sy, 'arrow').setScale(0.3).setVisible(false); // yay gerilirken kirişteki ok
+    this.aimG = this.add.graphics().setDepth(94000);
+    this.stringG = this.add.graphics();
+    this.drawHand = this.add.image(sx, sy, 'heroHand').setScale(0.375).setVisible(false);
+    this.chain = null; this.chargeStart = 0;
+    this.bv = { hp: 1, chip: 1, chipHold: 0, chipRate: 0, guard: 1, energy: 1, poise: 1 };
+    this.portalHint = this.makeText(world.portal.x, world.portal.y - 26, 'Portal: yakında açılacak', '#ecd8ff', 8).setVisible(false);
+    // Görseller fizik adımından SONRA hizalanır: kılıç, gölge ve kamera karakterle aynı karede hareket eder
+    this.events.on('postupdate', () => this.syncVisuals());
+    this.stunUntil = 0; this.punchStart = 0; this.punchUntil = 0; this.punchReady = 0; this.hitIdx = 9; this.shot = true; this.arrows = [];
+    this.guarding = false; this.swingSide = 1;
+    this.sword = this.add.image(sx, sy, 'it_sword_basic').setScale(0.42); // karakterin yeni oranına göre biraz küçük
+    this.shieldImg = this.add.image(sx, sy, 'it_shield_wood').setVisible(false);
+    this.guardArc = this.add.image(sx, sy, 'guardArc5').setOrigin(0, 0.5).setVisible(false);
+    this.guardPt = { x: sx, y: sy };
+
+    // Antrenman kuklası: meydandan kaldırıldı, evin yanındaki antrenman köşesinde duruyor
+    const dx = world.dummy.x, dy = world.dummy.y;
+    this.dummy = { x: dx, y: dy, state: 'idle', next: 0, t: 0,
+      img: this.add.image(dx, dy, 'dummy').setOrigin(0.5, 1).setDepth(dy),
+      bang: this.makeText(dx, dy - 23, '!', '#ff5a8a', 12).setVisible(false) };
+    solid(dx, dy - 3, 10, 6);
+
+    // Silah tüccarı: tente + tezgâh, arkasında satıcı
+    const mx = world.merchant.x, my = world.merchant.y;
+    this.add.image(mx, my, 'marketBack').setOrigin(0.5, 1).setDepth(my - 29);
+    this.add.image(mx, my, 'marketFront').setOrigin(0.5, 1).setDepth(my);
+    solid(mx, my - 15, 80, 30);
+    this.npc = { x: mx, y: my - 10, img: this.add.image(mx, my - 10, 'npc', 0).setOrigin(0.5, 1).setDepth(my - 28),
+      hint: this.makeText(mx, my - 80, 'Tüccara dokun', '#fff4d6', 8).setVisible(false) };
+    this.tweens.add({ targets: this.npc.img, y: this.npc.y - 1, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    Shop.init(this); AvatarUI.init(this);
+    this.applyEquip();
+
+    const walk = (key, a, b, c) => this.anims.create({ key, frames: [b, a, c, a].map(f => ({ key: 'hero', frame: f })), frameRate: 8, repeat: -1 });
+    walk('walk-down', 0, 1, 2); walk('walk-up', 3, 4, 5); walk('walk-side', 6, 7, 8);
+    this.idleFrame = { down: 0, up: 3, side: 6 };
+
+    // Kamera
+    this.physics.world.setBounds(0, 0, worldW, worldH);
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, worldW, worldH);
+    cam.setZoom(Screen.zoom);
+    cam.startFollow(this.player, false, 1, 1, 0, 12); // gecikmesiz takip: karakter ekranda sabit kalır, titremez
+
+    this.keys = this.input.keyboard.addKeys('LEFT,RIGHT,UP,DOWN,A,D,W,S,J,K,L,E,SPACE,SHIFT');
+    this.time.addEvent({ delay: 3000, loop: true, callback: () => this.saveGame() });
+  }
+
+  saveGame() { SaveService.save({ v: 5, x: Math.round(this.player.x), y: Math.round(this.player.y), player: PlayerData }); }
+
+  // Kuşanılan eşyalara göre görünümü ve savunmayı günceller
+  applyEquip() {
+    const e = PlayerData.equipped, hand = 'hand_' + e.weapon, key = this.textures.exists(hand) ? hand : 'it_' + e.weapon; // zincirli silahlarda elde sadece sap durur
+    this.sword.setTexture(key).setOrigin(Art.grip[key] / this.textures.get(key).getSourceImage().width, 0.5).setScale(WEAPON_CLASS[weaponItem().type].scale || 0.375).setFlipY(false);
+    this.chargeStart = 0;
+    if (e.shield) this.shieldImg.setTexture('it_' + e.shield);
+    Art.paintHero(this);
+    this.stats.guard = guardInfo().max; this.stats.guardBroken = false;
+  }
+
+  tryOpenShop(viaTap) {
+    const p = this.player, n = this.npc;
+    if (Math.hypot(p.x - n.x, p.y - n.y) < 60) Shop.show();
+    else if (viaTap) this.floatText(n.x, n.y - 30, 'Biraz yaklaş', '#fff4d6', 8);
+  }
+
+  // Yazılar büyük çizilip küçültülür: her cihazda net ve doğru boyutta görünür
+  makeText(x, y, str, color, size = 9) {
+    const Z = Screen.zoom;
+    return this.add.text(x, y, str, { fontFamily: '"Fredoka", "Trebuchet MS", sans-serif', fontSize: (size * Z) + 'px', fontStyle: 'bold',
+      color, stroke: PALETTE.outline, strokeThickness: 2 * Z }).setOrigin(0.5, 1).setDepth(99999).setScale(1 / Z);
+  }
+  floatText(x, y, str, color, size = 9) {
+    const t = this.makeText(x, y, str, color, size);
+    this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 750, ease: 'Quad.easeIn', onComplete: () => t.destroy() });
+  }
+  slashFx(x, y, angle, tint, flip, size = 0.78) {
+    const s = this.add.image(x, y, 'slash').setOrigin(0, 0.5).setRotation(angle).setDepth(99998).setScale(size).setFlipY(!!flip);
+    if (tint) s.setTint(tint);
+    this.tweens.add({ targets: s, alpha: 0, scale: size * 1.5, duration: 190, ease: 'Quad.easeOut', onComplete: () => s.destroy() });
+  }
+  ringFx(x, y, tint, to = 2) {
+    const r = this.add.image(x, y, 'ring').setTint(tint).setScale(0.3).setDepth(99997);
+    this.tweens.add({ targets: r, scale: to, alpha: 0, duration: 280, ease: 'Quad.easeOut', onComplete: () => r.destroy() });
+  }
+  sparkFx(x, y, scale = 2) {
+    const sp = this.add.image(x, y, 'spark').setDepth(99998);
+    this.tweens.add({ targets: sp, scale, alpha: 0, angle: 90, duration: 240, onComplete: () => sp.destroy() });
+  }
+  burst(x, y, tint, n = 7, dist = 18) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, d = dist * (0.5 + Math.random() * 0.7);
+      const o = this.add.image(x, y, 'dot').setTint(tint).setDepth(99998);
+      this.tweens.add({ targets: o, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, alpha: 0, duration: 260 + Math.random() * 160,
+        ease: 'Quad.easeOut', onComplete: () => o.destroy() });
+    }
+  }
+
+  // Adım tozu: 3 küçük toz bulutu yükselir ve 0,5 sn'de kaybolur
+  stepDust(x, y, mx, my) {
+    for (let i = 0; i < 3; i++) {
+      const d = this.add.image(x - mx * 3 + (Math.random() * 6 - 3), y - 1 + (Math.random() * 2 - 1), 'dust').setAlpha(0.85).setScale(0.6 + Math.random() * 0.4).setDepth(y - 0.5);
+      this.tweens.add({ targets: d, y: d.y - 8 - Math.random() * 3, x: d.x - mx * 3 + (Math.random() * 2 - 1), alpha: 0, scale: 1.3,
+        duration: 500, ease: 'Quad.easeOut', onComplete: () => d.destroy() });
+    }
+  }
+  // Atılma başlangıcı: 5 toz bulutu ve çakıllar geriye savrulur
+  dashKick(x, y, dx, dy) {
+    for (let i = 0; i < 5; i++) {
+      const back = 8 + Math.random() * 16, side = Math.random() * 8 - 4;
+      const d = this.add.image(x + (Math.random() * 4 - 2), y - 1, 'dust').setAlpha(0.9).setScale(0.9 + Math.random() * 0.6).setDepth(y - 0.5);
+      this.tweens.add({ targets: d, x: x - dx * back - dy * side, y: y - 1 - dy * back + dx * side - 4 - Math.random() * 6, alpha: 0, scale: 2.2,
+        duration: 420 + Math.random() * 120, ease: 'Quad.easeOut', onComplete: () => d.destroy() });
+    }
+    for (let i = 0; i < 5; i++) {
+      const back = 12 + Math.random() * 16, side = Math.random() * 10 - 5, dur = 300 + Math.random() * 120;
+      const o = this.add.image(x, y - 1, 'dot').setTint(i % 2 ? 0x8a7460 : 0x6a5a4c).setDepth(y + 0.5);
+      const ty = y - 1 - dy * back + dx * side;
+      this.tweens.add({ targets: o, x: x - dx * back - dy * side, duration: dur, onComplete: () => o.destroy() });
+      this.tweens.add({ targets: o, y: ty - 7, duration: dur / 2, ease: 'Quad.easeOut', yoyo: false,
+        onComplete: () => this.tweens.add({ targets: o, y: ty, duration: dur / 2, ease: 'Quad.easeIn' }) });
+    }
+  }
+
+  // Ölüm: karakter yere devrilir, yarı saydam hayaleti sallanarak yükselir, sonra meydanda yeniden doğar
+  die(now) {
+    const p = this.player, st = this.stats;
+    this.dead = true; st.hp = 0; st.exposedUntil = 0; this.dashUntil = 0; this.punchUntil = 0; this.guarding = false; this.chargeStart = 0;
+    p.setVelocity(0, 0); p.anims.stop(); p.setFrame(this.idleFrame.down); p.setTint(0x9a8088);
+    this.tweens.add({ targets: p, angle: p.flipX ? -90 : 90, duration: 200, ease: 'Quad.easeIn' });
+    this.floatText(p.x, p.y - 52, 'Yenildin', '#ffcf4a', 10);
+    const gx = p.x, gy = p.y - 3;
+    const gh = this.add.image(gx, gy, 'hero', 0).setOrigin(0.5, 1).setTintFill(0xc4d0dc).setAlpha(0).setDepth(p.y + 50);
+    this.tweens.addCounter({ from: 0, to: 1, duration: 1500, delay: 250,
+      onUpdate: tw => {
+        const t = tw.getValue();
+        gh.setPosition(gx + Math.sin(t * Math.PI * 4) * 4, gy - 28 * t).setAlpha(t < 0.15 ? t / 0.15 * 0.7 : 0.7 * (1 - (t - 0.15) / 0.85));
+      },
+      onComplete: () => gh.destroy() });
+    this.time.delayedCall(1900, () => {
+      p.setAngle(0); p.clearTint(); p.setPosition(32 * CONFIG.tile, 25 * CONFIG.tile + 8);
+      st.hp = COMBAT.hpMax; st.poise = COMBAT.poise.max; st.energy = COMBAT.energy.max;
+      this.sword.setVisible(true); this.arm.setVisible(true); this.dead = false;
+      this.ringFx(p.x, p.y - 8, 0xffffff, 2);
+    });
+  }
+
+  // Çubuk değerleri (can çubuğunda gecikmeli soluk parça: 0,25 sn bekler, 0,3 sn'de erir)
+  hudNow(now, dt) {
+    const st = this.stats, E = COMBAT.energy, PO = COMBAT.poise, v = this.bv;
+    const hp = Math.max(0, st.hp / COMBAT.hpMax);
+    if (hp < v.hp - 0.004) { v.chipHold = now + 250; v.chipRate = (v.chip - hp) / 0.3; }
+    if (hp >= v.chip) v.chip = hp; else if (now >= v.chipHold) v.chip = Math.max(hp, v.chip - v.chipRate * dt);
+    v.hp = hp; v.guard = st.guard / guardInfo().max; v.guardBroken = st.guardBroken;
+    v.energy = st.energy / E.max; v.energyLow = st.energy < E.dashCost;
+    v.poise = st.poise / PO.max; v.exposed = now < st.exposedUntil;
+    Hud.update();
+  }
+
+  // Karakterin başının üstündeki birleşik gösterge: can, siper, enerji, denge
+  drawBars(now) {
+    const p = this.player, v = this.bv, g = this.barG, W = 20, x = -10, n = this.npc;
+    g.setPosition(p.x, p.y - 33).clear();
+    g.setAlpha(Math.hypot(p.x - n.x, p.y - n.y) < 60 ? 0.25 : 1); // tüccarın önünde onu kapatmasın
+    g.fillStyle(0x1a1020, 1).fillRect(x - 1, 0, W + 2, 6);
+    const row = (y, h, frac, col) => {
+      g.fillStyle(0x4a4058, 1).fillRect(x, y, W, h);
+      if (frac > 0.005) g.fillStyle(col, 1).fillRect(x, y, Math.max(1, W * Math.min(1, frac)), h);
+    };
+    // İki katmanlı çubuk: altta ince can çubuğu, tam üstünde saydam turuncu denge katmanı
+    row(1, 2, v.chip, 0xffd0c8);
+    if (v.hp > 0.005) g.fillStyle(0xe8343a, 1).fillRect(x, 1, Math.max(1, W * v.hp), 2);
+    if (v.exposed) g.fillStyle(Math.floor(now / 120) % 2 ? 0xffffff : 0xffb020, 0.85).fillRect(x, 1, W, 2); // savunmasız: yanıp söner
+    else if (v.poise > 0.005) g.fillStyle(0xffb020, 0.5).fillRect(x, 1, Math.max(1, W * Math.min(1, v.poise)), 2);
+    // Enerji
+    row(4, 1, v.energy, v.energyLow ? 0xc8d0b8 : 0x7ad84a);
+  }
+
+  // Kılıç ağaç, taş gibi nesnelere değerse onları çok hafif sallar
+  hitProps(cx, cy, dir, reach, arc = 0.2) {
+    for (const o of this.props) {
+      const ex = o.x - cx, ey = o.y - o.mid - cy, ed = Math.hypot(ex, ey) || 1;
+      if (ed > reach + 5 || (ex * dir.x + ey * dir.y) / ed < Math.min(arc, 0.2) || o.busy) continue;
+      o.busy = true;
+      const done = () => { o.img.setAngle(0).setPosition(o.x, o.y); o.busy = false; };
+      if (o.sway) {
+        this.tweens.add({ targets: o.img, angle: { from: 0, to: (dir.x || (ex < 0 ? -1 : 1)) * o.sway }, duration: 70, yoyo: true, repeat: 1, onComplete: done });
+        this.burst(o.x, o.y - (o.tree ? 24 : 6), 0x84d86c, 4, 10);
+      } else {
+        this.tweens.add({ targets: o.img, x: o.x + dir.x, y: o.y + dir.y, duration: 45, yoyo: true, repeat: 1, onComplete: done });
+        this.burst(o.x, o.y - o.mid, 0xe0dce8, 3, 8);
+      }
+    }
+  }
+
+  attack(now) {
+    const A = WEAPON_CLASS[weaponItem().type], p = this.player, dir = this.dir, ang = Math.atan2(dir.y, dir.x), cx = p.x, cy = p.y - 8;
+    this.punchStart = now; this.punchUntil = now + A.time; this.punchReady = now + A.cooldown; this.hitIdx = 0; this.shot = false;
+    this.swingSide = -this.swingSide;
+    // Silahın türüne göre savurma izi
+    if (A.anim === 'slash' || A.anim === 'chop' || A.anim === 'sweep' || A.anim === 'smash') this.slashFx(cx + dir.x * 2, cy + dir.y * 2, ang, 0, this.swingSide < 0, A.slash);
+    else if (A.anim === 'spin') { this.ringFx(cx, cy, 0xdfeeff, 3.2); this.slashFx(cx, cy, ang, 0, false, 1); this.slashFx(cx, cy, ang + Math.PI, 0, false, 1); }
+    else if (A.anim === 'flail') this.ringFx(cx, cy, 0xb0b8c8, 3);
+    else if (A.anim === 'thrust') {
+      const st = this.add.image(cx + dir.x * 8, cy + dir.y * 8, 'dot').setOrigin(0, 0.5).setRotation(ang).setScale(4, 1).setAlpha(0.9).setDepth(99998);
+      this.tweens.add({ targets: st, scaleX: A.reach / 2, alpha: 0, duration: A.time, ease: 'Quad.easeOut', onComplete: () => st.destroy() });
+    }
+  }
+  // Pençe: üç paralel çizik
+  clawFx(cx, cy, ang, flip) {
+    for (let i = -1; i <= 1; i++) this.slashFx(cx + Math.cos(ang) * 3 - Math.sin(ang) * i * 3, cy + Math.sin(ang) * 3 + Math.cos(ang) * i * 3, ang + i * 0.12, 0xffe8e8, flip, 0.42);
+  }
+  // Vuruş anı: menzil ve açı içindeki hedeflere hasar
+  strike(A, cx, cy, dir) {
+    const d = this.dummy, ex = d.x - cx, ey = d.y - 9 - cy, ed = Math.hypot(ex, ey) || 1;
+    if (ed < A.reach && (ex * dir.x + ey * dir.y) / ed > A.arc) this.hitDummy();
+    this.hitProps(cx, cy, dir, A.reach, A.arc);
+  }
+  // Yay: güç (0-1) arttıkça ok daha hızlı ve daha uzağa gider, daha çok hasar verir
+  releaseArrow(now, power) {
+    const p = this.player, dir = this.dir, cx = p.x, cy = p.y - 8, A = WEAPON_CLASS.bow;
+    const speed = 110 + 300 * power, range = 36 + 200 * power;
+    const img = this.add.image(cx + dir.x * 8, cy + dir.y * 8, 'arrow').setScale(0.3).setRotation(Math.atan2(dir.y, dir.x)).setDepth(cy + 30);
+    this.arrows.push({ img, vx: dir.x * speed, vy: dir.y * speed, speed, left: range, mult: 0.55 + 0.75 * power });
+    this.punchStart = now; this.punchUntil = now + 150; this.punchReady = now + 260; this.shot = true; this.hitIdx = 9;
+    this.burst(cx + dir.x * 8, cy + dir.y * 8, 0xffffff, 2 + Math.round(power * 4), 6);
+  }
+  updateArrows(dt) {
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const a = this.arrows[i]; a.img.x += a.vx * dt; a.img.y += a.vy * dt; a.left -= a.speed * dt;
+      const d = this.dummy, hit = Math.hypot(a.img.x - d.x, a.img.y - (d.y - 9)) < 11;
+      if (hit) this.hitDummy(a.mult);
+      if (hit || a.left <= 0) {
+        if (!hit) this.burst(a.img.x, a.img.y, 0xd8c8a0, 3, 6);
+        a.img.destroy(); this.arrows.splice(i, 1);
+      }
+    }
+  }
+  // Zincir: uç uca bağlı parçalar halinde canlandırılır. Baştaki nokta ele bağlı, uçtaki ağırlık (top / bıçak) ataletle geriden gelir.
+  hideChain() { if (this.chain) { this.chain.links.forEach(l => l.destroy()); this.chain.head.destroy(); this.chain = null; } }
+  updateChain(dt, kind, ax, ay, target, groundY, depth) {
+    let C = this.chain;
+    if (!C || C.kind !== kind) {
+      this.hideChain();
+      const n = kind === 'flail' ? 7 : 11, seg = kind === 'flail' ? 2.5 : 4.6;
+      C = this.chain = { kind, seg, pts: Array.from({ length: n }, (_, i) => ({ x: ax, y: ay + i * seg, px: ax, py: ay + i * seg })),
+        links: Array.from({ length: n - 1 }, () => this.add.image(ax, ay, kind === 'flail' ? 'link' : 'barlink')),
+        head: this.add.image(ax, ay, kind === 'flail' ? 'flail_head' : 'whip_head') };
+      C.links.forEach(l => l.setScale(0.375)); C.head.setScale(0.375).setOrigin(kind === 'flail' ? 0.5 : 1 / 24, 0.5);
+    }
+    const P = C.pts, n = P.length, last = P[n - 1];
+    if (Math.hypot(P[0].x - ax, P[0].y - ay) > 60) P.forEach((q, i) => { q.x = q.px = ax; q.y = q.py = ay + i * C.seg; }); // ışınlanma
+    dt = Math.min(dt, 1 / 30);
+    for (let i = 1; i < n; i++) {
+      const q = P[i], heavy = i === n - 1 ? 0.975 : 0.9, vx = (q.x - q.px) * heavy, vy = (q.y - q.py) * heavy;
+      q.px = q.x; q.py = q.y; q.x += vx; q.y += vy + 620 * dt * dt;
+    }
+    for (let it = 0; it < 10; it++) {
+      P[0].x = ax; P[0].y = ay;
+      if (target) { last.x += (target.x - last.x) * 0.45; last.y += (target.y - last.y) * 0.45; }
+      for (let i = 0; i < n - 1; i++) {
+        const a = P[i], b = P[i + 1], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.001;
+        if (d <= C.seg) continue;
+        const k = (d - C.seg) / d, wa = i === 0 ? 0 : 0.5, wb = 1 - wa;
+        a.x += dx * k * wa; a.y += dy * k * wa; b.x -= dx * k * wb; b.y -= dy * k * wb;
+      }
+      for (let i = 1; i < n; i++) if (P[i].y > groundY) { P[i].y += (groundY - P[i].y) * 0.35; P[i].py = P[i].y; P[i].px = P[i].x - (P[i].x - P[i].px) * 0.6; } // yere değince sürtünür
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const a = P[i], b = P[i + 1];
+      C.links[i].setPosition((a.x + b.x) / 2, (a.y + b.y) / 2).setRotation(Math.atan2(b.y - a.y, b.x - a.x) + (kind === 'flail' && i % 2 ? Math.PI / 2 : 0)).setDepth(depth);
+    }
+    const pr = P[n - 2];
+    C.head.setPosition(last.x, last.y).setRotation(Math.atan2(last.y - pr.y, last.x - pr.x)).setDepth(depth + 0.1);
+    return last;
+  }
+
+  hitDummy(mult = 1) {
+    const d = this.dummy, [lo, hi] = weaponDmg();
+    const dmg = Math.max(1, Math.round((lo + Math.floor(Math.random() * (hi - lo + 1))) * mult));
+    PlayerData.gold += 2; this.floatText(d.x + 10, d.y - 12, '+2 altın', '#ffcf4a', 7);
+    this.floatText(d.x + (Math.random() * 8 - 4), d.y - 22, '-' + dmg, '#ffffff', 11);
+    this.sparkFx(d.x, d.y - 9, 2.2); this.burst(d.x, d.y - 9, 0xd58cff, 8);
+    d.img.setTintFill(0xffffff);
+    this.time.delayedCall(80, () => d.img.clearTint());
+    this.tweens.add({ targets: d.img, x: d.x + this.dir.x * 3, y: d.y + this.dir.y * 3, duration: 55, yoyo: true });
+  }
+
+  dummyStrike(now) {
+    const d = this.dummy, p = this.player, st = this.stats, C = COMBAT.dummy;
+    let tx = p.x - d.x, ty = p.y - d.y;
+    const dist = Math.hypot(tx, ty) || 1; tx /= dist; ty /= dist;
+    this.slashFx(d.x, d.y - 8, Math.atan2(ty, tx), 0xd58cff);
+    if (dist > C.range + 6) return;
+    const facingIt = this.dir.x * -tx + this.dir.y * -ty > 0.3;
+    if (this.guarding && facingIt) {
+      // Savuşturma: hasar savunma sağlığından düşer
+      st.guard -= C.dmg; st.lastGuardHit = now;
+      const gx = this.guardPt.x, gy = this.guardPt.y;
+      this.sparkFx(gx, gy, 2.6); this.ringFx(gx, gy, 0x9fe0ff); this.burst(gx, gy, 0xffe98a, 10, 22);
+      const blocker = guardInfo().kind === 'shield' ? this.shieldImg : this.sword;
+      blocker.setTintFill(0xffffff); this.time.delayedCall(90, () => blocker.clearTint());
+      this.tweens.add({ targets: d.img, angle: { from: -14, to: 14 }, duration: 90, yoyo: true, repeat: 2, onComplete: () => d.img.setAngle(0) });
+      d.next = now + C.cooldown + 700;
+      if (st.guard <= 0) {
+        st.guard = 0; st.guardBroken = true;
+        this.ringFx(gx, gy, 0xff6a5a, 2.6); this.burst(gx, gy, 0xb0b0c0, 10, 24);
+        this.floatText(p.x, p.y - 50, 'Savunma kırıldı!', '#ff9a7a', 9);
+      } else this.floatText(p.x, p.y - 50, 'Savuşturdun!', '#9fe0ff', 9);
+    } else {
+      const armor = ITEMS[PlayerData.equipped.armor], PO = COMBAT.poise, crit = now < st.exposedUntil;
+      const taken = Math.max(1, C.dmg - (armor ? armor.def : 0)) * (crit ? PO.critMult : 1);
+      st.hp -= taken;
+      if (crit) {
+        // Savunmasızken yenen vuruş: 2 kat hasar, sonra denge yenilenir
+        st.exposedUntil = 0; st.poise = PO.max;
+        this.floatText(p.x, p.y - 52, 'KRİTİK! -' + taken, '#ffcf4a', 13);
+        this.burst(p.x, p.y - 8, 0xffcf4a, 14, 28); this.ringFx(p.x, p.y - 8, 0xffcf4a, 2.6); this.sparkFx(p.x, p.y - 8, 3);
+      } else {
+        this.floatText(p.x, p.y - 50, '-' + taken, '#ff6a6a', 11);
+        this.burst(p.x, p.y - 8, 0xff5a5a, 8); this.ringFx(p.x, p.y - 8, 0xff5a5a, 1.4);
+        st.poise -= taken * PO.perDamage; st.lastPoiseHit = now;
+        if (st.poise <= 0) {
+          st.poise = 0; st.exposedUntil = now + PO.exposedTime;
+          this.floatText(p.x, p.y - 62, 'Dengen bozuldu!', '#ff9a3a', 9);
+        }
+      }
+      p.setTint(0xff7070); this.hurtFlashUntil = now + 140;
+      p.setVelocity(tx * 150, ty * 150); this.stunUntil = now + 140;
+      if (st.hp <= 0) this.die(now);
+    }
+  }
+
+  // Fizikten sonra çalışır: gölge, silah, kalkan ve durum işaretleri
+  syncVisuals() {
+    const p = this.player, st = this.stats, now = this.time.now, g = guardInfo();
+    p.setDepth(p.y);
+    this.shadow.setPosition(p.x, p.y - 1);
+    this.drawBars(now);
+    // Karakter bir ağacın arkasına geçince ağaç saydamlaşır
+    for (const o of this.trees) {
+      const target = Math.abs(o.x - p.x) < 15 && p.y < o.y && p.y > o.y - (o.kind === 'pine' ? 50 : 44) ? 0.45 : 1;
+      if (o.img.alpha !== target) o.img.alpha = Math.abs(target - o.img.alpha) < 0.03 ? target : o.img.alpha + (target - o.img.alpha) * 0.2;
+    }
+    if (this.dead) {
+      this.sword.setVisible(false); this.arm.setVisible(false); this.nock.setVisible(false); this.aimG.clear(); this.stringG.clear(); this.drawHand.setVisible(false); this.hideChain(); this.shieldImg.setVisible(false); this.guardArc.setVisible(false); this.dizzy.setVisible(false);
+      return;
+    }
+
+    // Silah ve kol: kol omuzdan döner, silah elin ucunda durur; karakter silahı kendi eliyle kullanır
+    const cx = p.x, cy = p.y - 8, dir = this.dir, ang = Math.atan2(dir.y, dir.x), dt = this.game.loop.delta / 1000;
+    const front = dir.y < 0 ? p.y - 1 : p.y + 1, sw = this.sword, arm = this.arm, A = WEAPON_CLASS[weaponItem().type];
+    const useShield = this.guarding && g.kind === 'shield';
+    const V = Math.PI / 2, L = 6.4, f = p.frame.name % 3, walk = f === 1 ? 1 : f === 2 ? -1 : 0, sd = this.swingSide;
+    const shX = this.facing === 'down' ? -4.6 : this.facing === 'up' ? 4.6 : -dir.x * 0.4, shY = -11.4;
+    const worn = A.anim === 'claw', hang = A.anim === 'flail' || A.anim === 'whip', charging = this.chargeStart > 0;
+    // taşıma: kol aşağı sarkar ve yürürken sallanır
+    let aa = V + (this.facing === 'side' ? -dir.x * walk * 0.5 : (this.facing === 'down' ? 0.14 : -0.14) + walk * 0.12);
+    let wa = this.facing === 'side' ? (A.vertical ? (dir.x > 0 ? 0 : Math.PI) : hang ? (dir.x > 0 ? 1.25 : Math.PI - 1.25) : (dir.x > 0 ? -0.4 : -Math.PI + 0.4)) : (A.vertical ? 0 : hang ? V : -V);
+    let ox = 0, oy = 0, wDepth = this.facing === 'up' ? p.y - 1 : p.y + 1.2, headTarget = null, pull = -1;
+    this.updateArrows(dt);
+    this.nock.setVisible(false); this.aimG.clear();
+    if (now < this.punchUntil) {
+      // Saldırı: her silah türünün kendi hareketi var; kol da silahla birlikte döner
+      const t = Math.min(1, (now - this.punchStart) / A.time), e = 1 - (1 - t) * (1 - t);
+      let a = ang;
+      if (A.anim === 'slash') a = ang + (-1.7 + 3.4 * e) * sd;                        // hızlı yay
+      else if (A.anim === 'sweep') a = ang + (-2.0 + 4.0 * e) * sd;                   // geniş, ağır savurma
+      else if (A.anim === 'chop') a = ang + (-2.3 + 2.9 * t * t * t) * sd;            // geriden gerilip sert iniş
+      else if (A.anim === 'smash') a = ang + (-2.0 + 2.4 * t * t * t) * (dir.x < 0 ? -1 : 1) * (dir.y ? sd : 1); // tepeden vuruş
+      else if (A.anim === 'spin') a = ang + Math.PI * 2 * e * sd;                     // tam tur
+      else if (A.anim === 'flail') {                                                  // el küçük daire çizer, top zincirin ucunda geriden gelerek döner
+        a = ang + Math.PI * 4 * t * sd;
+        const la = a - 0.9 * sd, rr = A.reach * 0.72;
+        headTarget = { x: cx + Math.cos(la) * rr, y: cy + Math.sin(la) * rr };
+      }
+      else if (A.anim === 'thrust') { const k = t < 0.25 ? -5 * (t / 0.25) : -5 + 15 * Math.sin((t - 0.25) / 0.75 * Math.PI); ox = dir.x * k; oy = dir.y * k; } // geri çek, sapla
+      else if (A.anim === 'whip') {                                                   // bilek şaklar, bıçak ileri fırlayıp geri döner
+        a = ang + 0.7 * Math.sin(t * Math.PI * 2) * (1 - t) * sd;
+        const ext = A.reach * Math.pow(Math.sin(t * Math.PI), 0.7);
+        headTarget = { x: cx + dir.x * ext, y: cy + dir.y * ext };
+      }
+      else if (A.anim === 'claw') { a = ang + (t < 0.5 ? -1.1 + 4.4 * t : 1.1 - 4.4 * (t - 0.5)) * sd; const k = 3 * Math.sin(t * Math.PI * 2 % Math.PI); ox = dir.x * k; oy = dir.y * k; } // çift pençe
+      else if (A.anim === 'shoot') { const k = 2 * (1 - t); ox = dir.x * k; oy = dir.y * k; }  // ok çıktıktan sonra kol geri gelir
+      aa = a; wa = a;
+      wDepth = dir.y < 0 && (A.anim === 'thrust' || A.anim === 'shoot') ? p.y - 1 : p.y + 2;
+      if (A.anim !== 'shoot') {
+        const marks = A.hits === 2 ? [0.22, 0.7] : [A.hitAt || 0.35];
+        while (this.hitIdx < marks.length && t > marks[this.hitIdx]) {
+          this.hitIdx++;
+          this.strike(A, cx, cy, dir);
+          if (A.anim === 'claw') this.clawFx(cx, cy, ang, this.hitIdx === 2);
+          if (A.anim === 'smash' || A.anim === 'chop') { const hx = cx + dir.x * (A.reach - 8), hy = cy + dir.y * (A.reach - 8) + 6; this.ringFx(hx, hy, 0xffffff, A.anim === 'smash' ? 1.8 : 1.1); this.burst(hx, hy, 0xd8c8a0, 6, 12); }
+          if (A.anim === 'whip') this.sparkFx(cx + dir.x * A.reach, cy + dir.y * A.reach, 1.6);
+        }
+      }
+    } else if (charging) {
+      // Yay: önce kol kalkar (0,18 sn), sonra kiriş çekilir; güç arttıkça yay bükülür, ok geri gelir
+      const held = now - this.chargeStart, lift = Math.min(1, held / 180), pw = Math.min(1, held / 1100);
+      const ease = lift * lift * (3 - 2 * lift);
+      let diff = ang - aa; while (diff > Math.PI) diff -= 2 * Math.PI; while (diff < -Math.PI) diff += 2 * Math.PI;
+      aa += diff * ease; wa = ang; wDepth = dir.y < 0 ? p.y - 1 : p.y + 2;
+      const k = -1.5 * pw; ox = dir.x * k; oy = dir.y * k;                 // gerdikçe gövdeye doğru hafif çekilir
+      pull = lift < 1 ? 0 : 1 + 6 * pw + (pw >= 1 ? Math.sin(now / 40) * 0.3 : 0); // tam güçte kol titrer
+      const range = 36 + 200 * pw, gph = this.aimG;
+      if (lift >= 1) {
+        for (let dd = 16; dd < range; dd += 8) gph.fillStyle(0xffffff, 0.25 + 0.45 * pw).fillRect(cx + dir.x * dd - 0.75, cy + dir.y * dd - 0.75, 1.5, 1.5);
+        gph.fillStyle(pw >= 1 ? 0xffcf4a : 0xffffff, 0.9).fillRect(cx + dir.x * range - 1.5, cy + dir.y * range - 1.5, 3, 3);
+      }
+    } else if (this.guarding && !useShield) {
+      const qx = -dir.y, qy = dir.x; // bakış yönüne dik
+      this.guardPt = { x: cx + dir.x * 9, y: cy + dir.y * 8 + 1 };
+      aa = Math.atan2(this.guardPt.y - qy * 4 - (p.y + shY), this.guardPt.x - qx * 4 - (p.x + shX));
+      wa = worn ? aa : Math.atan2(qy, qx); wDepth = front;
+    }
+    // omuz -> el -> silah
+    const sX = p.x + shX + ox * 0.5, sY = p.y + shY + oy * 0.5, hX = sX + Math.cos(aa) * L + ox * 0.5, hY = sY + Math.sin(aa) * L + oy * 0.5;
+    const left = Math.cos(aa) < 0;
+    arm.setPosition(sX, sY).setRotation(aa).setFlipY(left).setDepth(this.facing === 'up' && now >= this.punchUntil && !charging ? p.y + 0.4 : p.y + 1.6);
+    if (worn) sw.setPosition(hX, hY).setRotation(aa).setFlipY(left).setDepth(arm.depth + 0.1);   // pençe ele giyilidir: kolla aynı yöne bakar
+    else sw.setPosition(hX, hY).setRotation(wa).setFlipY(false).setDepth(wDepth);
+    // Yay kirişi: uçlardan ok yuvasına iki çizgi. Gerilince geriye çekilir, yay da hafifçe bükülür.
+    this.stringG.clear(); this.drawHand.setVisible(false);
+    if (A.anim === 'shoot') {
+      const sc = A.scale, pl = Math.max(0, pull), bend = pl * 0.012;
+      sw.setScale(sc * (1 + bend * 1.5), sc * (1 - bend));
+      const c = Math.cos(wa), sn = Math.sin(wa), loc = (lx, ly) => ({ x: hX + (lx * c - ly * sn) * sc, y: hY + (lx * sn + ly * c) * sc });
+      const t1 = loc(-11 - pl * 1.2, -29 * (1 - bend)), t2 = loc(-11 - pl * 1.2, 29 * (1 - bend)), nk = loc(-10 - pl / sc, 0);
+      this.stringG.setDepth(wDepth + 0.05).lineStyle(0.5, 0xf0e8d8, 1).beginPath().moveTo(t1.x, t1.y).lineTo(nk.x, nk.y).lineTo(t2.x, t2.y).strokePath();
+      if (pull >= 0) {
+        this.nock.setVisible(true).setScale(0.3).setOrigin(0.1, 0.5).setPosition(nk.x, nk.y).setRotation(ang).setDepth(wDepth + 0.1);
+        this.drawHand.setVisible(true).setPosition(nk.x, nk.y).setDepth(wDepth + 0.2);
+      }
+    }
+    // zincirli silahlar: sapın ucundan başlayan zincir ve ucundaki ağırlık ayrı parçalar olarak hareket eder
+    if (hang) {
+      const tipLen = (sw.width - sw.width * sw.originX) * 0.375;
+      const end = this.updateChain(dt, A.anim, hX + Math.cos(wa) * tipLen, hY + Math.sin(wa) * tipLen, headTarget, headTarget ? 1e9 : p.y + 1, headTarget && dir.y > 0 ? p.y + 2.4 : p.y + 1.3);
+      this.chainEnd = end;
+    } else this.hideChain();
+
+    // Kalkan varsa savunmayı kalkan yapar, silah elde kalır
+    this.shieldImg.setVisible(useShield);
+    if (useShield) {
+      this.guardPt = { x: cx + dir.x * 8, y: cy + dir.y * 7 + 2 };
+      this.shieldImg.setPosition(this.guardPt.x, this.guardPt.y).setDepth(front + 0.5);
+    }
+    this.guardArc.setVisible(this.guarding);
+    if (this.guarding) {
+      // Siper sağlığı yayın kendisinde görünür: hasar aldıkça kısalır ve soluklaşır
+      const gf = Math.max(0, Math.min(1, st.guard / g.max));
+      this.guardArc.setTexture('guardArc' + Math.max(1, Math.ceil(gf * 5)))
+        .setPosition(cx, cy + 1).setRotation(ang).setAlpha((0.3 + 0.7 * gf) * (0.85 + 0.15 * Math.sin(now / 80))).setDepth(front + 1);
+    }
+
+
+    // Savunmasızken karakter turuncu yanıp söner, başında işaret döner
+    const exposed = now < st.exposedUntil;
+    this.dizzy.setVisible(exposed);
+    if (exposed) {
+      this.dizzy.setPosition(p.x, p.y - 48).setAngle(now / 3).setDepth(p.y + 3);
+      p.setTint(Math.floor(now / 110) % 2 ? 0xffb060 : 0xffffff);
+    } else if (now >= this.hurtFlashUntil && p.isTinted) p.clearTint();
+  }
+
+  update(time, delta) {
+    const p = this.player, k = this.keys, st = this.stats, now = time, dt = delta / 1000;
+    const g = guardInfo(), JD = Phaser.Input.Keyboard.JustDown;
+
+    // Market açıkken oyun bekler
+    if (Shop.open || AvatarUI.open) { p.setVelocity(0, 0); p.anims.stop(); return; }
+    if (this.dead) { Controls.release(); p.setVelocity(0, 0); this.hudNow(now, dt); return; }
+    // Satıcı: yakındaysan ipucu göster, dokununca market açılır
+    const n = this.npc, tap = Controls.consumeTap();
+    n.hint.setVisible(Math.hypot(p.x - n.x, p.y - n.y) < 60);
+    this.portalHint.setVisible(Math.hypot(p.x - this.portal.x, p.y - this.portal.y) < 26);
+    if (tap) {
+      const wv = this.cameras.main.worldView;
+      const wx = wv.x + (tap.x - (Screen.lw - Screen.cw) / 2) / Screen.cw * wv.width;
+      const wy = wv.y + (tap.y - (Screen.lh - Screen.ch) / 2) / Screen.ch * wv.height;
+      if (Math.hypot(wx - n.x, wy - (n.y - 12)) < 26) { this.tryOpenShop(true); return; }
+    }
+    if (JD(k.E)) { this.tryOpenShop(false); if (Shop.open) return; }
+    const stunned = now < this.stunUntil, punching = now < this.punchUntil;
+
+    // Savunma (basılı tut) ve saldırı
+    const wantGuard = Controls.guard || k.K.isDown || k.SHIFT.isDown;
+    this.guarding = wantGuard && !st.guardBroken && !stunned && !punching;
+    const atk = Controls.consumeAtk() | JD(k.J) | JD(k.SPACE), atkHeld = Controls.atkHeld || k.J.isDown || k.SPACE.isDown;
+    if (WEAPON_CLASS[weaponItem().type].anim === 'shoot') {
+      // Yay: tuşa basılı tutunca nişan alır ve gerilir, bırakınca atar. Ne kadar uzun tutulursa ok o kadar hızlı ve uzağa gider.
+      const can = !this.guarding && !stunned && now >= this.punchReady;
+      if (this.chargeStart && !can && now >= this.punchReady) this.chargeStart = 0;
+      else if (this.chargeStart && !atkHeld) { this.releaseArrow(now, Math.min(1, (now - this.chargeStart) / 1100)); this.chargeStart = 0; }
+      else if (!this.chargeStart && can && atkHeld) this.chargeStart = now;
+      else if (!this.chargeStart && can && atk) this.releaseArrow(now, 0.05); // çok kısa dokunuş: en zayıf atış
+    } else if (atk && !this.guarding && !stunned && now >= this.punchReady) this.attack(now);
+
+    // Hareket
+    let vx = Controls.x, vy = Controls.y;
+    if (k.LEFT.isDown || k.A.isDown) vx = -1; else if (k.RIGHT.isDown || k.D.isDown) vx = 1;
+    if (k.UP.isDown || k.W.isDown) vy = -1; else if (k.DOWN.isDown || k.S.isDown) vy = 1;
+    const len = Math.hypot(vx, vy);
+    if (len > 1) { vx /= len; vy /= len; }
+    let speed = CONFIG.speed;
+    if (this.guarding) speed *= COMBAT.guardMoveFactor;
+    if (now < this.punchUntil) speed *= 0.25;
+    if (this.chargeStart) speed *= 0.4;
+    // İleri atılma: enerji harcar
+    const E = COMBAT.energy;
+    if ((Controls.consumeDash() | JD(k.L)) && !stunned && now >= this.dashUntil) {
+      if (st.energy >= E.dashCost) {
+        st.energy -= E.dashCost; st.lastDash = now; this.dashUntil = now + COMBAT.dash.time;
+        this.dashDir = len > 0.05 ? { x: vx / len, y: vy / len } : { x: this.dir.x, y: this.dir.y };
+        this.dashKick(p.x, p.y, this.dashDir.x, this.dashDir.y);
+      } else this.floatText(p.x, p.y - 50, 'Enerji yetmiyor', '#c8d0b8', 8);
+    }
+    const dashing = now < this.dashUntil;
+    if (dashing) {
+      this.guarding = false;
+      p.setVelocity(this.dashDir.x * COMBAT.dash.speed, this.dashDir.y * COMBAT.dash.speed);
+    } else if (!stunned) p.setVelocity(vx * speed, vy * speed);
+
+    if (len > 0.05 && !stunned) {
+      if (now >= this.punchUntil) {
+        if (Math.abs(vx) >= Math.abs(vy)) { this.facing = 'side'; p.setFlipX(vx < 0); this.dir = { x: vx < 0 ? -1 : 1, y: 0 }; }
+        else { this.facing = vy < 0 ? 'up' : 'down'; p.setFlipX(false); this.dir = { x: 0, y: vy < 0 ? -1 : 1 }; }
+      }
+      p.anims.play('walk-' + this.facing, true);
+      if (!dashing && now >= this.stepAt) { this.stepAt = now + 250; this.stepDust(p.x, p.y, vx / len, vy / len); }
+    } else {
+      p.anims.stop(); p.setFrame(this.idleFrame[this.facing]);
+    }
+    // Kelebek ve böcekler
+    for (const c of this.critters) {
+      c.a += (Math.random() - 0.5) * (c.fly ? 0.5 : 0.2);
+      const ox = c.hx - c.img.x, oy = c.hy - c.img.y;
+      if (ox * ox + oy * oy > (c.fly ? 2500 : 400)) c.a = Math.atan2(oy, ox);
+      c.img.x += Math.cos(c.a) * c.speed * dt; c.img.y += Math.sin(c.a) * c.speed * dt;
+      if (c.fly) { c.flap += delta; c.img.setFrame(Math.floor(c.flap / 130) % 2); }
+      else c.img.setFlipX(Math.cos(c.a) < 0);
+    }
+
+    // Savunma ve can dolumu
+    if (!this.guarding && now - st.lastGuardHit > COMBAT.guardRegenDelay) {
+      st.guard = Math.min(g.max, st.guard + g.regen * dt);
+      if (st.guardBroken && st.guard >= g.max) { // tamamen dolunca tekrar kullanılabilir
+        st.guardBroken = false;
+        this.ringFx(p.x, p.y - 8, 0x7fd4ff, 1.6); this.floatText(p.x, p.y - 48, 'Siper hazır', '#9fe0ff', 8);
+      }
+    }
+    st.hp = Math.min(COMBAT.hpMax, st.hp + COMBAT.hpRegen * dt);
+    if (now - st.lastDash > E.regenDelay) st.energy = Math.min(E.max, st.energy + E.regen * dt);
+    const PO = COMBAT.poise;
+    if (st.exposedUntil && now >= st.exposedUntil) { st.exposedUntil = 0; st.poise = PO.max; } // 3 sn doldu: denge yenilenir
+    else if (!st.exposedUntil && now - st.lastPoiseHit > PO.regenDelay) st.poise = Math.min(PO.max, st.poise + PO.regen * dt);
+
+    // Kukla: yakındaysan önce uyarır (!), sonra vurur
+    const d = this.dummy, C = COMBAT.dummy, dist = Math.hypot(p.x - d.x, p.y - d.y);
+    if (d.state === 'idle' && now >= d.next && dist < C.range) {
+      d.state = 'windup'; d.t = now + C.windup; d.bang.setVisible(true); d.img.setTint(0xffb0c8);
+    } else if (d.state === 'windup' && now >= d.t) {
+      d.state = 'idle'; d.next = now + C.cooldown; d.bang.setVisible(false); d.img.clearTint();
+      this.dummyStrike(now);
+    }
+
+    this.hudNow(now, dt);
+  }
+}
+
+/* ---------- Başlat ---------- */
+Screen.init();
+Controls.init();
+const startGame = () => new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: Screen.gameW * Screen.zoom,
+  height: CONFIG.height * Screen.zoom,
+  pixelArt: true,
+  roundPixels: true,
+  backgroundColor: PALETTE.wall,
+  physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false, fixedStep: false } },
+  scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER },
+  scene: [WorldScene]
+});
+// Yazı tipi hazır olunca başla (en geç 1,5 sn bekler)
+let started = false;
+const go = () => { if (!started) { started = true; startGame(); } };
+(document.fonts && document.fonts.load ? Promise.all([document.fonts.load('700 16px Fredoka'), document.fonts.load('500 16px Fredoka')]) : Promise.resolve()).then(go, go);
+setTimeout(go, 1500);
+</script>
+</body>
+</html>
