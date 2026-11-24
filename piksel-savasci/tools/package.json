@@ -1,7 +1,0 @@
-{
-  "name": "piksel-savasci-test",
-  "private": true,
-  "description": "Oyunu tarayıcı olmadan çalıştırıp kontrol eden ve ekran görüntüsü alan test aracı",
-  "scripts": { "test": "node test.js" },
-  "dependencies": { "@napi-rs/canvas": "1.1.1", "jsdom": "31.0.1", "phaser": "3.80.1" }
-}
